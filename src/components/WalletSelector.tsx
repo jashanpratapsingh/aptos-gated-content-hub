@@ -83,15 +83,18 @@ export const WalletSelector = () => {
           }
         }
         
-        // Update the profile with the wallet address
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .update({
-            wallet_address: address
-          })
-          .eq('id', supabase.auth.getUser().then(({ data }) => data.user?.id));
-        
-        if (profileError) console.error("Error updating profile:", profileError);
+        // Update the profile with the wallet address - FIX: Getting user ID asynchronously
+        const { data: userData } = await supabase.auth.getUser();
+        if (userData && userData.user) {
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .update({
+              wallet_address: address
+            })
+            .eq('id', userData.user.id);
+          
+          if (profileError) console.error("Error updating profile:", profileError);
+        }
         
         toast({
           title: "Authentication Successful",
