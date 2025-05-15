@@ -28,11 +28,11 @@ const featuredContent = [
   },
   {
     id: '3',
-    title: 'Private Discord Community',
-    description: 'Join our exclusive Discord community for NFT collectors and creators.',
+    title: 'Advanced Aptos Move Tutorial',
+    description: 'Learn advanced Move programming concepts for building on Aptos blockchain.',
     nftCollection: '0x9abc...ijkl',
-    contentType: 'link' as const,
-    thumbnail: 'https://images.unsplash.com/photo-1614680376573-df3480f0c6ff',
+    contentType: 'pdf' as const,
+    thumbnail: 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31',
     isLocked: true,
   },
 ];

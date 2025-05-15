@@ -8,8 +8,9 @@ import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { FileVideo, FilePdf } from 'lucide-react';
 
-// Mock data for content items
+// Mock data for content items - updated to remove link type
 const myContent = [
   {
     id: '1',
@@ -27,14 +28,6 @@ const myContent = [
     nftCollection: '0x5678...efgh',
     views: 85,
   },
-  {
-    id: '3',
-    title: 'Private Discord Link',
-    type: 'Link',
-    date: '2023-07-01',
-    nftCollection: '0x9abc...ijkl',
-    views: 210,
-  },
 ];
 
 const Dashboard = () => {
@@ -47,14 +40,13 @@ const Dashboard = () => {
   const [nftAddress, setNftAddress] = useState('');
   const [contentType, setContentType] = useState('pdf');
   const [file, setFile] = useState<File | null>(null);
-  const [contentUrl, setContentUrl] = useState('');
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     
     // Validate form
-    if (!title || !description || !nftAddress || (contentType !== 'link' && !file) || (contentType === 'link' && !contentUrl)) {
+    if (!title || !description || !nftAddress || !file) {
       toast({
         title: "Missing Information",
         description: "Please fill in all required fields.",
@@ -77,7 +69,6 @@ const Dashboard = () => {
       setDescription('');
       setNftAddress('');
       setFile(null);
-      setContentUrl('');
     }, 2000);
   };
   
@@ -160,7 +151,7 @@ const Dashboard = () => {
                           onClick={() => setContentType('pdf')}
                           className={contentType === 'pdf' ? "bg-aptosCyan hover:bg-aptosCyan/80" : ""}
                         >
-                          PDF Document
+                          <FilePdf className="mr-2 h-4 w-4" /> PDF Document
                         </Button>
                         <Button 
                           type="button"
@@ -168,78 +159,58 @@ const Dashboard = () => {
                           onClick={() => setContentType('video')}
                           className={contentType === 'video' ? "bg-aptosCyan hover:bg-aptosCyan/80" : ""}
                         >
-                          Video
-                        </Button>
-                        <Button 
-                          type="button"
-                          variant={contentType === 'link' ? "default" : "outline"}
-                          onClick={() => setContentType('link')}
-                          className={contentType === 'link' ? "bg-aptosCyan hover:bg-aptosCyan/80" : ""}
-                        >
-                          External Link
+                          <FileVideo className="mr-2 h-4 w-4" /> Video
                         </Button>
                       </div>
                     </div>
                     
-                    {contentType === 'link' ? (
-                      <div className="space-y-2">
-                        <Label htmlFor="contentUrl">External URL</Label>
-                        <Input 
-                          id="contentUrl" 
-                          placeholder="https://..." 
-                          value={contentUrl} 
-                          onChange={e => setContentUrl(e.target.value)}
+                    <div className="space-y-2">
+                      <Label htmlFor="file">Upload File</Label>
+                      <div className="border border-dashed border-border rounded-lg p-6 text-center">
+                        <input
+                          id="file"
+                          type="file"
+                          onChange={handleFileChange}
+                          className="hidden"
                         />
+                        {file ? (
+                          <div>
+                            <p className="font-medium text-white">{file.name}</p>
+                            <p className="text-sm text-aptosGray">
+                              {(file.size / 1024 / 1024).toFixed(2)} MB
+                            </p>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setFile(null)}
+                              className="mt-2"
+                            >
+                              Remove
+                            </Button>
+                          </div>
+                        ) : (
+                          <div>
+                            <p className="text-aptosGray mb-2">
+                              Drag & drop your file here, or click to browse
+                            </p>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => document.getElementById('file')?.click()}
+                            >
+                              Select File
+                            </Button>
+                          </div>
+                        )}
                       </div>
-                    ) : (
-                      <div className="space-y-2">
-                        <Label htmlFor="file">Upload File</Label>
-                        <div className="border border-dashed border-border rounded-lg p-6 text-center">
-                          <input
-                            id="file"
-                            type="file"
-                            onChange={handleFileChange}
-                            className="hidden"
-                          />
-                          {file ? (
-                            <div>
-                              <p className="font-medium text-white">{file.name}</p>
-                              <p className="text-sm text-aptosGray">
-                                {(file.size / 1024 / 1024).toFixed(2)} MB
-                              </p>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setFile(null)}
-                                className="mt-2"
-                              >
-                                Remove
-                              </Button>
-                            </div>
-                          ) : (
-                            <div>
-                              <p className="text-aptosGray mb-2">
-                                Drag & drop your file here, or click to browse
-                              </p>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                onClick={() => document.getElementById('file')?.click()}
-                              >
-                                Select File
-                              </Button>
-                            </div>
-                          )}
-                        </div>
-                        <p className="text-xs text-aptosGray">
-                          {contentType === 'pdf' 
-                            ? 'Supported formats: PDF. Maximum size: 50MB.'
-                            : 'Supported formats: MP4, WebM. Maximum size: 500MB.'
-                          }
-                        </p>
-                      </div>
-                    )}
+                      <p className="text-xs text-aptosGray">
+                        {contentType === 'pdf' 
+                          ? 'Supported formats: PDF. Maximum size: 50MB.'
+                          : 'Supported formats: MP4, WebM. Maximum size: 500MB.'
+                        }
+                      </p>
+                    </div>
                     
                     <Button 
                       type="submit" 

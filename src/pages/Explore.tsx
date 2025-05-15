@@ -26,30 +26,12 @@ const contentItems = [
     isLocked: true,
   },
   {
-    id: '3',
-    title: 'Private Discord Community',
-    description: 'Join our exclusive Discord community for NFT collectors and creators.',
-    nftCollection: '0x9abc...ijkl',
-    contentType: 'link' as const,
-    thumbnail: 'https://images.unsplash.com/photo-1614680376573-df3480f0c6ff',
-    isLocked: true,
-  },
-  {
     id: '4',
     title: 'Aptos Move Advanced Tutorial',
     description: 'Advanced tutorial on Move programming language for Aptos blockchain.',
     nftCollection: '0xdef0...mnop',
     contentType: 'pdf' as const,
     thumbnail: 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31',
-    isLocked: true,
-  },
-  {
-    id: '5',
-    title: 'Exclusive Roadmap Reveal',
-    description: 'Get early access to our project roadmap and upcoming features.',
-    nftCollection: '0x1234...qrst',
-    contentType: 'link' as const,
-    thumbnail: 'https://images.unsplash.com/photo-1586892478025-2b5768db2747',
     isLocked: true,
   },
   {
@@ -115,13 +97,6 @@ const Explore = () => {
               className={selectedType === 'video' ? "bg-aptosCyan hover:bg-aptosCyan/80" : ""}
             >
               Videos
-            </Button>
-            <Button
-              variant={selectedType === 'link' ? "default" : "outline"}
-              onClick={() => setSelectedType('link')}
-              className={selectedType === 'link' ? "bg-aptosCyan hover:bg-aptosCyan/80" : ""}
-            >
-              Links
             </Button>
           </div>
         </div>

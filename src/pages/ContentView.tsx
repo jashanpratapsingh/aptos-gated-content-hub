@@ -1,16 +1,15 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Layout } from '../components/Layout';
 import { Button } from '@/components/ui/button';
-import { Lock } from 'lucide-react';
+import { Lock, FileVideo, FilePdf } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface Content {
   id: string;
   title: string;
   description: string;
-  contentType: 'pdf' | 'video' | 'link';
+  contentType: 'pdf' | 'video';
   nftCollection: string;
   creatorName: string;
   thumbnail?: string;
@@ -101,6 +100,7 @@ const ContentView = () => {
         return (
           <div className="aptos-card p-6 animate-fade-in">
             <div className="bg-black/40 rounded-lg p-4 h-[500px] flex items-center justify-center mb-4">
+              <FilePdf className="h-16 w-16 text-aptosGray mb-2" />
               <p className="text-aptosGray">PDF Viewer would be embedded here</p>
             </div>
             <Button className="aptos-btn w-full">Download PDF</Button>
@@ -109,24 +109,9 @@ const ContentView = () => {
       case 'video':
         return (
           <div className="aptos-card overflow-hidden animate-fade-in">
-            <div className="aspect-video bg-black/40 flex items-center justify-center">
+            <div className="aspect-video bg-black/40 flex items-center justify-center flex-col">
+              <FileVideo className="h-16 w-16 text-aptosGray mb-2" />
               <p className="text-aptosGray">Video Player would be embedded here</p>
-            </div>
-          </div>
-        );
-      case 'link':
-        return (
-          <div className="aptos-card p-8 animate-fade-in">
-            <div className="text-center">
-              <h3 className="text-xl font-semibold mb-4">External Link Unlocked</h3>
-              <p className="text-aptosGray mb-6">
-                You've successfully unlocked access to this external resource.
-              </p>
-              <Button className="aptos-btn" asChild>
-                <a href={content.contentUrl} target="_blank" rel="noopener noreferrer">
-                  Open Link
-                </a>
-              </Button>
             </div>
           </div>
         );
@@ -161,12 +146,12 @@ const ContentView = () => {
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="mb-8">
           <div className="flex items-center gap-2 text-aptosGray mb-2">
-            <span>Created by {content.creatorName}</span>
+            <span>Created by {content?.creatorName}</span>
             <span>•</span>
             <span>Requires NFT</span>
           </div>
-          <h1 className="text-3xl font-bold mb-4">{content.title}</h1>
-          <p className="text-aptosGray">{content.description}</p>
+          <h1 className="text-3xl font-bold mb-4">{content?.title}</h1>
+          <p className="text-aptosGray">{content?.description}</p>
         </div>
         
         {renderContentPreview()}

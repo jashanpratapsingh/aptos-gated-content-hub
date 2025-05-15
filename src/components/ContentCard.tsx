@@ -1,14 +1,14 @@
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Lock } from 'lucide-react';
+import { Lock, FileVideo, FilePdf } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface ContentCardProps {
   title: string;
   description: string;
   nftCollection: string;
-  contentType: 'pdf' | 'video' | 'link';
+  contentType: 'pdf' | 'video';
   thumbnail: string;
   isLocked: boolean;
   contentUrl?: string;
@@ -46,13 +46,11 @@ export const ContentCard = ({
   const getContentIcon = () => {
     switch (contentType) {
       case 'pdf':
-        return "📄";
+        return <FilePdf className="w-4 h-4" />;
       case 'video':
-        return "🎬";
-      case 'link':
-        return "🔗";
+        return <FileVideo className="w-4 h-4" />;
       default:
-        return "📁";
+        return <FilePdf className="w-4 h-4" />;
     }
   };
   
@@ -69,7 +67,7 @@ export const ContentCard = ({
             <Lock className="w-12 h-12 text-white/70" />
           </div>
         )}
-        <div className="absolute top-4 right-4 bg-card px-2 py-1 rounded-md text-sm">
+        <div className="absolute top-4 right-4 bg-card px-2 py-1 rounded-md text-sm flex items-center gap-1">
           {getContentIcon()} {contentType.toUpperCase()}
         </div>
       </div>
