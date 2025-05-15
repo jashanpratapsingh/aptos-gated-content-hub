@@ -1,8 +1,9 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Layout } from '../components/Layout';
 import { Button } from '@/components/ui/button';
-import { Lock, FileVideo, FilePdf } from 'lucide-react';
+import { Lock, FileVideo, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface Content {
@@ -100,7 +101,7 @@ const ContentView = () => {
         return (
           <div className="aptos-card p-6 animate-fade-in">
             <div className="bg-black/40 rounded-lg p-4 h-[500px] flex items-center justify-center mb-4">
-              <FilePdf className="h-16 w-16 text-aptosGray mb-2" />
+              <FileText className="h-16 w-16 text-aptosGray mb-2" />
               <p className="text-aptosGray">PDF Viewer would be embedded here</p>
             </div>
             <Button className="aptos-btn w-full">Download PDF</Button>

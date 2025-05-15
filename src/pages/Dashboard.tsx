@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Layout } from '../components/Layout';
 import { Button } from '@/components/ui/button';
@@ -8,7 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { FileVideo, FilePdf } from 'lucide-react';
+import { FileVideo, FileText } from 'lucide-react';
 
 // Mock data for content items - updated to remove link type
 const myContent = [
@@ -151,7 +150,7 @@ const Dashboard = () => {
                           onClick={() => setContentType('pdf')}
                           className={contentType === 'pdf' ? "bg-aptosCyan hover:bg-aptosCyan/80" : ""}
                         >
-                          <FilePdf className="mr-2 h-4 w-4" /> PDF Document
+                          <FileText className="mr-2 h-4 w-4" /> PDF Document
                         </Button>
                         <Button 
                           type="button"

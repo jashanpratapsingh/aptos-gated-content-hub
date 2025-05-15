@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Lock, FileVideo, FilePdf } from 'lucide-react';
+import { Lock, FileVideo, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface ContentCardProps {
@@ -46,11 +46,11 @@ export const ContentCard = ({
   const getContentIcon = () => {
     switch (contentType) {
       case 'pdf':
-        return <FilePdf className="w-4 h-4" />;
+        return <FileText className="w-4 h-4" />;
       case 'video':
         return <FileVideo className="w-4 h-4" />;
       default:
-        return <FilePdf className="w-4 h-4" />;
+        return <FileText className="w-4 h-4" />;
     }
   };
   
