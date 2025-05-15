@@ -1,19 +1,21 @@
 
 import React, { ReactNode } from 'react';
 import { AptosWalletAdapterProvider } from '@aptos-labs/wallet-adapter-react';
-import { PetraWallet } from 'petra-plugin-wallet-adapter';
-import { MartianWallet } from '@martianwallet/aptos-wallet-adapter';
+import { Network } from '@aptos-labs/ts-sdk';
 
 interface AptosWalletProviderProps {
   children: ReactNode;
 }
 
 export const AptosWalletProvider: React.FC<AptosWalletProviderProps> = ({ children }) => {
-  // Initialize the wallets
-  const wallets = [new PetraWallet(), new MartianWallet()];
-
   return (
-    <AptosWalletAdapterProvider plugins={wallets} autoConnect={false}>
+    <AptosWalletAdapterProvider
+      autoConnect={true}
+      dappConfig={{ network: Network.MAINNET }}
+      onError={(error) => {
+        console.log("Wallet adapter error:", error);
+      }}
+    >
       {children}
     </AptosWalletAdapterProvider>
   );
