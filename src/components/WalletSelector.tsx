@@ -56,6 +56,11 @@ export const WalletSelector = () => {
     try {
       setAuthenticating(true);
       
+      // Generate email and password based on wallet address
+      const emailAddress = `${address.toLowerCase()}@aptos-wallet.user`;
+      const nonce = Math.floor(Math.random() * 1000000).toString();
+      const password = `${address.toLowerCase()}-${nonce}`;
+      
       // Check if an account with this wallet address already exists
       const { data: existingProfiles } = await supabase
         .from('profiles')
@@ -63,32 +68,32 @@ export const WalletSelector = () => {
         .eq('wallet_address', address)
         .limit(1);
       
-      const emailAddress = `${address.toLowerCase()}@aptos-wallet.user`;
-      const nonce = Math.floor(Math.random() * 1000000).toString();
-      const password = `${address.toLowerCase()}-${nonce}`;
-      
+      // No existing profile - create a new account first
       if (!existingProfiles || existingProfiles.length === 0) {
-        // No existing profile found - create a new account
+        console.log("No existing profile found, creating new account");
+        
+        // Create a new user account
         const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
           email: emailAddress,
-          password: password,
+          password,
         });
         
         if (signUpError) {
+          console.error("Error signing up:", signUpError);
           throw signUpError;
         }
         
         // Update the profile with the wallet address
-        const { data: userData } = await supabase.auth.getUser();
-        if (userData && userData.user) {
+        if (signUpData && signUpData.user) {
           const { error: profileError } = await supabase
             .from('profiles')
-            .update({
-              wallet_address: address
-            })
-            .eq('id', userData.user.id);
+            .update({ wallet_address: address })
+            .eq('id', signUpData.user.id);
           
-          if (profileError) console.error("Error updating profile:", profileError);
+          if (profileError) {
+            console.error("Error updating profile:", profileError);
+            throw profileError;
+          }
         }
         
         toast({
@@ -96,25 +101,43 @@ export const WalletSelector = () => {
           description: "New wallet profile has been created and you're signed in.",
         });
       } else {
-        // Profile exists, sign in to the existing account
+        // Profile exists - sign in to the existing account
+        console.log("Existing profile found, signing in");
+        
+        // Try to sign in with a generated password
+        // Note: Since we don't store the original password, we'll create a new one
+        // and update the account with it
+        
+        // First, let's try to sign in with the new password
         const { error: signInError } = await supabase.auth.signInWithPassword({
           email: emailAddress,
-          password: password,
+          password,
         });
         
         if (signInError) {
-          // If sign in fails with this password, try reset password and sign in with new password
-          // This is a workaround since we don't store the original passwords
-          await supabase.auth.resetPasswordForEmail(emailAddress);
+          console.log("Sign-in failed, updating password for existing user");
           
-          // Try to sign in with the new password
-          const { error: retryError } = await supabase.auth.signInWithPassword({
+          // Reset password for the email address
+          const { error: resetError } = await supabase.auth.resetPasswordForEmail(
+            emailAddress,
+            { redirectTo: window.location.origin }
+          );
+          
+          if (resetError) {
+            console.error("Error resetting password:", resetError);
+            throw resetError;
+          }
+          
+          // After resetting password, we'll try signing up again as a new user
+          // This is a workaround since we don't have access to update the password directly
+          const { data: newSignUpData, error: newSignUpError } = await supabase.auth.signUp({
             email: emailAddress,
-            password: password,
+            password,
           });
           
-          if (retryError) {
-            throw new Error("Couldn't log in with existing wallet. Please try again later.");
+          if (newSignUpError) {
+            console.error("Error with new sign up after password reset:", newSignUpError);
+            throw new Error("Couldn't authenticate with existing wallet. Please try again later.");
           }
         }
         
