@@ -5,6 +5,7 @@ import { Layout } from '../components/Layout';
 import { ParticleBackground } from '../components/ParticleBackground';
 import { ContentCard } from '../components/ContentCard';
 import { Link } from 'react-router-dom';
+import { Lock } from 'lucide-react';
 
 const featuredContent = [
   {
@@ -51,11 +52,11 @@ const Index = () => {
               Own the keys to exclusive content. Connect your Aptos wallet and gain access to premium resources, videos, and communities.
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-4">
-              <Button as={Link} to="/explore" className="aptos-btn text-lg py-6 px-8">
-                Get Started
+              <Button className="aptos-btn text-lg py-6 px-8" asChild>
+                <Link to="/explore">Get Started</Link>
               </Button>
-              <Button as={Link} to="/dashboard" variant="outline" className="border-aptosCyan text-white hover:bg-aptosCyan/20 text-lg py-6 px-8">
-                Create Content
+              <Button variant="outline" className="border-aptosCyan text-white hover:bg-aptosCyan/20 text-lg py-6 px-8" asChild>
+                <Link to="/dashboard">Create Content</Link>
               </Button>
             </div>
           </div>
@@ -99,8 +100,8 @@ const Index = () => {
         </div>
         
         <div className="mt-12 text-center">
-          <Button as={Link} to="/explore" variant="outline" className="border-aptosCyan text-white hover:bg-aptosCyan/20">
-            View All Content
+          <Button variant="outline" className="border-aptosCyan text-white hover:bg-aptosCyan/20" asChild>
+            <Link to="/explore">View All Content</Link>
           </Button>
         </div>
       </div>
@@ -146,8 +147,8 @@ const Index = () => {
               <h2 className="text-2xl md:text-3xl font-bold mb-2">Ready to share exclusive content?</h2>
               <p className="text-aptosGray">Create and gate your content with NFTs in minutes.</p>
             </div>
-            <Button as={Link} to="/dashboard" className="aptos-btn">
-              Start Creating
+            <Button className="aptos-btn" asChild>
+              <Link to="/dashboard">Start Creating</Link>
             </Button>
           </div>
         </div>
