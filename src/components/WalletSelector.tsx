@@ -56,34 +56,29 @@ export const WalletSelector = () => {
     try {
       setAuthenticating(true);
       
-      // First check if the user is already signed in
-      const { data: { session } } = await supabase.auth.getSession();
+      // Check if an account with this wallet address already exists
+      const { data: existingProfiles } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('wallet_address', address)
+        .limit(1);
       
-      if (!session) {
-        // Generate a nonce for this session
-        const nonce = Math.floor(Math.random() * 1000000).toString();
-        
-        // Sign in anonymously, using the wallet address as the id
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: `${address.toLowerCase()}@aptos-wallet.user`,
-          password: `${address.toLowerCase()}-${nonce}`
+      const emailAddress = `${address.toLowerCase()}@aptos-wallet.user`;
+      const nonce = Math.floor(Math.random() * 1000000).toString();
+      const password = `${address.toLowerCase()}-${nonce}`;
+      
+      if (!existingProfiles || existingProfiles.length === 0) {
+        // No existing profile found - create a new account
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+          email: emailAddress,
+          password: password,
         });
         
-        if (error) {
-          // If sign in fails, try to create a new account
-          if (error.message.includes('email') || error.message.includes('password')) {
-            const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-              email: `${address.toLowerCase()}@aptos-wallet.user`,
-              password: `${address.toLowerCase()}-${nonce}`
-            });
-            
-            if (signUpError) throw signUpError;
-          } else {
-            throw error;
-          }
+        if (signUpError) {
+          throw signUpError;
         }
         
-        // Update the profile with the wallet address - FIX: Getting user ID asynchronously
+        // Update the profile with the wallet address
         const { data: userData } = await supabase.auth.getUser();
         if (userData && userData.user) {
           const { error: profileError } = await supabase
@@ -94,6 +89,33 @@ export const WalletSelector = () => {
             .eq('id', userData.user.id);
           
           if (profileError) console.error("Error updating profile:", profileError);
+        }
+        
+        toast({
+          title: "Account Created",
+          description: "New wallet profile has been created and you're signed in.",
+        });
+      } else {
+        // Profile exists, sign in to the existing account
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: emailAddress,
+          password: password,
+        });
+        
+        if (signInError) {
+          // If sign in fails with this password, try reset password and sign in with new password
+          // This is a workaround since we don't store the original passwords
+          await supabase.auth.resetPasswordForEmail(emailAddress);
+          
+          // Try to sign in with the new password
+          const { error: retryError } = await supabase.auth.signInWithPassword({
+            email: emailAddress,
+            password: password,
+          });
+          
+          if (retryError) {
+            throw new Error("Couldn't log in with existing wallet. Please try again later.");
+          }
         }
         
         toast({
@@ -108,6 +130,9 @@ export const WalletSelector = () => {
         description: error.message || "Failed to authenticate with wallet",
         variant: "destructive",
       });
+      
+      // If authentication fails, disconnect the wallet
+      disconnect();
     } finally {
       setAuthenticating(false);
     }
