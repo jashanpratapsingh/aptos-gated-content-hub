@@ -5,7 +5,9 @@ import { ContentCard } from '../components/ContentCard';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2 } from 'lucide-react';
+import { Loader2, AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { useAuth } from '@/providers/AptosWalletProvider';
 
 interface ContentItem {
   id: string;
@@ -21,6 +23,8 @@ const Explore = () => {
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [contentItems, setContentItems] = useState<ContentItem[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const { isAuthenticated } = useAuth();
   
   useEffect(() => {
     loadContent();
@@ -29,6 +33,7 @@ const Explore = () => {
   const loadContent = async () => {
     try {
       setLoading(true);
+      setError(null);
       
       const { data, error } = await supabase
         .from('content')
@@ -38,8 +43,9 @@ const Explore = () => {
       if (error) throw error;
       
       setContentItems(data as ContentItem[]);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading content:', error);
+      setError(error.message || 'Failed to load content');
     } finally {
       setLoading(false);
     }
@@ -109,10 +115,31 @@ const Explore = () => {
           </div>
         </div>
         
+        {/* Error message */}
+        {error && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+        
         {/* Content grid */}
         {loading ? (
           <div className="flex justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-aptosCyan" />
+          </div>
+        ) : contentItems.length === 0 ? (
+          <div className="rounded-lg border border-border bg-card p-8 text-center">
+            <h3 className="text-xl font-semibold mb-2">No content available yet</h3>
+            <p className="text-aptosGray mb-6">
+              There's currently no content in the database to display.
+            </p>
+            {!isAuthenticated && (
+              <p className="text-sm text-aptosGray">
+                Connect your wallet to unlock content creation and access features.
+              </p>
+            )}
           </div>
         ) : filteredItems.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
