@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { useWallet, WalletName } from '@aptos-labs/wallet-adapter-react';
+import { useWallet } from '@aptos-labs/wallet-adapter-react';
 
 export const WalletSelector = () => {
   const [showWallets, setShowWallets] = useState(false);
@@ -42,8 +42,9 @@ export const WalletSelector = () => {
     return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
   };
 
-  const handleConnectWallet = async (walletName: WalletName) => {
+  const handleConnectWallet = async (walletName: string) => {
     try {
+      console.log(`Attempting to connect to wallet: ${walletName}`);
       await connect(walletName);
       setShowWallets(false);
       
@@ -52,6 +53,7 @@ export const WalletSelector = () => {
         description: `Connected to ${walletName}`,
       });
     } catch (error: any) {
+      console.error("Connection error:", error);
       toast({
         title: "Connection Failed",
         description: error.message || "Failed to connect wallet",
@@ -97,7 +99,7 @@ export const WalletSelector = () => {
       )}
       
       {showWallets && (
-        <div className="absolute right-0 mt-2 w-60 rounded-lg bg-card border border-border shadow-lg z-50">
+        <div className="absolute right-0 mt-2 w-60 rounded-lg bg-slate-900 border border-border shadow-lg z-50">
           <div className="p-2">
             {!connected ? (
               <>
