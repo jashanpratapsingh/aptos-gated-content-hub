@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useWallet } from '@aptos-labs/wallet-adapter-react';
@@ -21,10 +20,17 @@ export const useContentService = () => {
   // Get user's created content
   const getUserContent = async (): Promise<ContentItem[]> => {
     try {
+      // Get the authenticated user
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        throw new Error('Not authenticated');
+      }
+      
       const { data: profile } = await supabase
         .from('profiles')
         .select('id')
-        .eq('wallet_address', account?.address)
+        .eq('id', user.id)
         .single();
       
       if (!profile) {
@@ -62,43 +68,35 @@ export const useContentService = () => {
         throw new Error('Wallet not connected');
       }
       
-      // First ensure user has a profile with wallet address
-      const { data: existingProfile } = await supabase
+      // Get authenticated user
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        throw new Error('Not authenticated');
+      }
+      
+      // Ensure user has profile with wallet address
+      const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select('id')
-        .eq('wallet_address', account.address)
+        .select('id, wallet_address')
+        .eq('id', user.id)
         .single();
         
-      if (!existingProfile) {
-        // Try to get the user's auth profile
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          throw new Error('Please sign in to upload content');
-        }
-        
-        // Update profile with wallet address
-        const { error: updateError } = await supabase
+      if (profileError || !profile) {
+        throw new Error('Profile not found');
+      }
+      
+      // Update profile with wallet address if it's not set
+      if (!profile.wallet_address) {
+        await supabase
           .from('profiles')
           .update({ wallet_address: account.address })
           .eq('id', user.id);
-          
-        if (updateError) throw updateError;
-      }
-      
-      // Get updated profile
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('wallet_address', account.address)
-        .single();
-      
-      if (!profile) {
-        throw new Error('Failed to retrieve profile');
       }
       
       // Create a unique file path
       const fileExt = file.name.split('.').pop();
-      const filePath = `${profile.id}/${Date.now()}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
+      const filePath = `${user.id}/${Date.now()}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
       
       // Upload file to Supabase storage
       const { error: uploadError } = await supabase.storage
@@ -112,7 +110,7 @@ export const useContentService = () => {
         .from('content')
         .insert([
           {
-            creator_id: profile.id,
+            creator_id: user.id,
             title,
             description,
             content_type: contentType,

@@ -3,9 +3,11 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useWallet, WalletName } from '@aptos-labs/wallet-adapter-react';
+import { supabase } from '@/integrations/supabase/client';
 
 export const WalletSelector = () => {
   const [showWallets, setShowWallets] = useState(false);
+  const [authenticating, setAuthenticating] = useState(false);
   const { toast } = useToast();
   const { 
     connect, 
@@ -24,6 +26,13 @@ export const WalletSelector = () => {
     wallet.readyState === 'NotDetected'
   );
 
+  // Handle wallet connection changes
+  useEffect(() => {
+    if (connected && account?.address) {
+      handleAuthentication(account.address);
+    }
+  }, [connected, account?.address]);
+
   // Close wallet dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -40,6 +49,65 @@ export const WalletSelector = () => {
   // Format address for display
   const formatAddress = (address: string) => {
     return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
+  };
+
+  // Handle authentication with Supabase
+  const handleAuthentication = async (address: string) => {
+    try {
+      setAuthenticating(true);
+      
+      // First check if the user is already signed in
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        // Generate a nonce for this session
+        const nonce = Math.floor(Math.random() * 1000000).toString();
+        
+        // Sign in anonymously, using the wallet address as the id
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: `${address.toLowerCase()}@aptos-wallet.user`,
+          password: `${address.toLowerCase()}-${nonce}`
+        });
+        
+        if (error) {
+          // If sign in fails, try to create a new account
+          if (error.message.includes('email') || error.message.includes('password')) {
+            const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+              email: `${address.toLowerCase()}@aptos-wallet.user`,
+              password: `${address.toLowerCase()}-${nonce}`
+            });
+            
+            if (signUpError) throw signUpError;
+          } else {
+            throw error;
+          }
+        }
+        
+        // Update the profile with the wallet address
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update({
+            wallet_address: address
+          })
+          .eq('id', supabase.auth.getUser().then(({ data }) => data.user?.id));
+        
+        if (profileError) console.error("Error updating profile:", profileError);
+        
+        toast({
+          title: "Authentication Successful",
+          description: "Your wallet is now connected and you're signed in.",
+        });
+      }
+    } catch (error: any) {
+      console.error("Authentication error:", error);
+      toast({
+        title: "Authentication Failed",
+        description: error.message || "Failed to authenticate with wallet",
+        variant: "destructive",
+      });
+    } finally {
+      setAuthenticating(false);
+    }
   };
 
   const handleConnectWallet = async (walletName: string) => {
@@ -67,9 +135,12 @@ export const WalletSelector = () => {
     try {
       await disconnect();
       
+      // Sign out from Supabase as well
+      await supabase.auth.signOut();
+      
       toast({
         title: "Wallet Disconnected",
-        description: "Your wallet has been disconnected",
+        description: "Your wallet has been disconnected and you're signed out.",
       });
     } catch (error: any) {
       toast({
@@ -86,14 +157,16 @@ export const WalletSelector = () => {
         <Button 
           onClick={() => setShowWallets(!showWallets)} 
           className="aptos-btn"
+          disabled={authenticating}
         >
-          Connect Wallet
+          {authenticating ? "Connecting..." : "Connect Wallet"}
         </Button>
       ) : (
         <Button 
           variant="outline" 
           className="border border-aptosCyan text-white hover:bg-aptosCyan/20" 
           onClick={() => setShowWallets(!showWallets)}
+          disabled={authenticating}
         >
           {account?.address && formatAddress(account.address)}
         </Button>
