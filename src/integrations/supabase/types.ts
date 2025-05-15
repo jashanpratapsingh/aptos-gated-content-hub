@@ -9,16 +9,118 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      content: {
+        Row: {
+          content_type: Database["public"]["Enums"]["content_type"]
+          created_at: string
+          creator_id: string
+          description: string | null
+          id: string
+          nft_collection_address: string
+          storage_path: string
+          title: string
+          updated_at: string
+          views: number | null
+        }
+        Insert: {
+          content_type: Database["public"]["Enums"]["content_type"]
+          created_at?: string
+          creator_id: string
+          description?: string | null
+          id?: string
+          nft_collection_address: string
+          storage_path: string
+          title: string
+          updated_at?: string
+          views?: number | null
+        }
+        Update: {
+          content_type?: Database["public"]["Enums"]["content_type"]
+          created_at?: string
+          creator_id?: string
+          description?: string | null
+          id?: string
+          nft_collection_address?: string
+          storage_path?: string
+          title?: string
+          updated_at?: string
+          views?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_creator_id_fkey"
+            columns: ["creator_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_access_logs: {
+        Row: {
+          accessed_at: string
+          content_id: string
+          id: string
+          user_id: string | null
+          wallet_address: string
+        }
+        Insert: {
+          accessed_at?: string
+          content_id: string
+          id?: string
+          user_id?: string | null
+          wallet_address: string
+        }
+        Update: {
+          accessed_at?: string
+          content_id?: string
+          id?: string
+          user_id?: string | null
+          wallet_address?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_access_logs_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: false
+            referencedRelation: "content"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          id: string
+          updated_at: string
+          wallet_address: string | null
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          updated_at?: string
+          wallet_address?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          updated_at?: string
+          wallet_address?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      increment_content_views: {
+        Args: { content_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
-      [_ in never]: never
+      content_type: "pdf" | "video"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -133,6 +235,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      content_type: ["pdf", "video"],
+    },
   },
 } as const

@@ -1,74 +1,188 @@
 
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { Layout } from '../components/Layout';
 import { Button } from '@/components/ui/button';
-import { Lock, FileVideo, FileText } from 'lucide-react';
+import { Lock, FileVideo, FileText, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useWallet } from '@aptos-labs/wallet-adapter-react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Content {
   id: string;
   title: string;
   description: string;
-  contentType: 'pdf' | 'video';
-  nftCollection: string;
-  creatorName: string;
-  thumbnail?: string;
-  contentUrl?: string;
+  content_type: 'pdf' | 'video';
+  nft_collection_address: string;
+  storage_path: string;
+  creator: {
+    wallet_address: string;
+  }
 }
 
 const ContentView = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const [content, setContent] = useState<Content | null>(null);
+  const [contentUrl, setContentUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [isNftOwner, setIsNftOwner] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const { toast } = useToast();
+  const { account, connected } = useWallet();
   
   useEffect(() => {
-    // Simulate fetching content data
-    setTimeout(() => {
-      // Mock data for this example
-      const mockContent: Content = {
-        id: id || '1',
-        title: "Exclusive Aptos Development Guide",
-        description: "Learn how to build on Aptos blockchain with this comprehensive development guide. This guide covers everything from basic setup to advanced Move programming concepts.",
-        contentType: 'pdf',
-        nftCollection: '0x1234...abcd',
-        creatorName: "Aptos Labs",
-        thumbnail: 'https://images.unsplash.com/photo-1526304640581-d334cdbbf45e',
-        contentUrl: '#'
-      };
-      
-      setContent(mockContent);
-      setLoading(false);
-    }, 1000);
+    if (id) {
+      loadContent(id);
+    }
   }, [id]);
   
-  const verifyNftOwnership = () => {
-    setVerifying(true);
-    
-    // Simulate NFT verification process
-    setTimeout(() => {
-      setVerifying(false);
+  const loadContent = async (contentId: string) => {
+    try {
+      setLoading(true);
       
-      // For demo purposes, randomly determine if user owns the NFT
+      // Fetch content with creator info
+      const { data, error } = await supabase
+        .from('content')
+        .select(`
+          id, 
+          title, 
+          description, 
+          content_type, 
+          nft_collection_address,
+          storage_path,
+          profiles:creator_id (
+            wallet_address
+          )
+        `)
+        .eq('id', contentId)
+        .single();
+      
+      if (error) throw error;
+      
+      if (!data) {
+        navigate('/404');
+        return;
+      }
+      
+      // Transform data to match our Content interface
+      const contentData: Content = {
+        id: data.id,
+        title: data.title,
+        description: data.description,
+        content_type: data.content_type,
+        nft_collection_address: data.nft_collection_address,
+        storage_path: data.storage_path,
+        creator: {
+          wallet_address: data.profiles.wallet_address
+        }
+      };
+      
+      setContent(contentData);
+      
+      // If user is already connected, check NFT ownership
+      if (connected && account) {
+        await checkNftOwnership(contentData.nft_collection_address);
+      }
+    } catch (error) {
+      console.error('Error loading content:', error);
+      toast({
+        title: "Content Not Found",
+        description: "The requested content could not be loaded.",
+        variant: "destructive",
+      });
+      navigate('/explore');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Simplified NFT verification (in a real app, you would check the blockchain)
+  const checkNftOwnership = async (nftCollectionAddress: string) => {
+    try {
+      setVerifying(true);
+      
+      if (!account?.address) {
+        setIsNftOwner(false);
+        return;
+      }
+      
+      // For demo purposes, we're going to simulate a blockchain check
+      // In a real app, you would check if the user owns an NFT from this collection
+      // on the Aptos blockchain
+      
+      // Simulate API call to verify NFT ownership
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // For demo purposes, we'll assume ownership with 50% probability
+      // In a real app, this would be a real verification
       const hasNft = Math.random() > 0.5;
       
-      if (hasNft) {
-        setIsNftOwner(true);
-        toast({
-          title: "Access Granted",
-          description: "NFT ownership verified. You now have access to this content.",
-        });
-      } else {
-        toast({
-          title: "Access Denied",
-          description: "You don't own an NFT from the required collection.",
-          variant: "destructive",
-        });
+      setIsNftOwner(hasNft);
+      
+      // Log content access if verification is successful
+      if (hasNft && content) {
+        await logContentAccess();
       }
-    }, 2000);
+      
+      // Get content URL if user has access
+      if (hasNft && content) {
+        const { data } = await supabase.storage
+          .from('content')
+          .createSignedUrl(content.storage_path, 3600); // 1 hour expiry
+          
+        setContentUrl(data?.signedUrl || null);
+      }
+    } catch (error) {
+      console.error('Error verifying NFT ownership:', error);
+      setIsNftOwner(false);
+    } finally {
+      setVerifying(false);
+    }
+  };
+  
+  const logContentAccess = async () => {
+    try {
+      if (!content || !account?.address) return;
+      
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      // Log content access
+      await supabase.from('content_access_logs').insert([
+        {
+          content_id: content.id,
+          user_id: user?.id || null,
+          wallet_address: account.address,
+        }
+      ]);
+      
+      // Increment view count
+      await supabase.rpc('increment_content_views', { content_id: content.id });
+    } catch (error) {
+      console.error('Error logging content access:', error);
+    }
+  };
+  
+  const verifyNftOwnership = async () => {
+    if (!content) return;
+    
+    if (!connected) {
+      toast({
+        title: "Connect Wallet",
+        description: "Please connect your wallet first to verify NFT ownership.",
+      });
+      return;
+    }
+    
+    await checkNftOwnership(content.nft_collection_address);
+    
+    if (!isNftOwner) {
+      toast({
+        title: "Access Denied",
+        description: "You don't own an NFT from the required collection.",
+        variant: "destructive",
+      });
+    }
   };
   
   const renderContentPreview = () => {
@@ -83,37 +197,68 @@ const ContentView = () => {
             This content is exclusive to owners of NFTs from collection:
           </p>
           <p className="font-mono text-sm bg-black/30 px-3 py-2 rounded-lg mb-6">
-            {content.nftCollection}
+            {content.nft_collection_address}
           </p>
           <Button 
             onClick={verifyNftOwnership}
             disabled={verifying}
             className="aptos-btn"
           >
-            {verifying ? "Verifying..." : "Verify NFT Ownership"}
+            {verifying ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Verifying...
+              </>
+            ) : "Verify NFT Ownership"}
           </Button>
         </div>
       );
     }
     
-    switch (content.contentType) {
+    switch (content.content_type) {
       case 'pdf':
         return (
           <div className="aptos-card p-6 animate-fade-in">
-            <div className="bg-black/40 rounded-lg p-4 h-[500px] flex items-center justify-center mb-4">
-              <FileText className="h-16 w-16 text-aptosGray mb-2" />
-              <p className="text-aptosGray">PDF Viewer would be embedded here</p>
-            </div>
-            <Button className="aptos-btn w-full">Download PDF</Button>
+            {contentUrl ? (
+              <div className="mb-4">
+                <iframe 
+                  src={contentUrl} 
+                  className="w-full h-[500px] rounded-lg border border-border"
+                  title={content.title}
+                />
+              </div>
+            ) : (
+              <div className="bg-black/40 rounded-lg p-4 h-[500px] flex items-center justify-center mb-4">
+                <FileText className="h-16 w-16 text-aptosGray mb-2" />
+                <p className="text-aptosGray">PDF Viewer would be embedded here</p>
+              </div>
+            )}
+            <Button 
+              className="aptos-btn w-full" 
+              onClick={() => contentUrl && window.open(contentUrl, '_blank')}
+              disabled={!contentUrl}
+            >
+              Download PDF
+            </Button>
           </div>
         );
       case 'video':
         return (
           <div className="aptos-card overflow-hidden animate-fade-in">
-            <div className="aspect-video bg-black/40 flex items-center justify-center flex-col">
-              <FileVideo className="h-16 w-16 text-aptosGray mb-2" />
-              <p className="text-aptosGray">Video Player would be embedded here</p>
-            </div>
+            {contentUrl ? (
+              <div className="aspect-video">
+                <video 
+                  src={contentUrl} 
+                  controls 
+                  className="w-full h-full" 
+                />
+              </div>
+            ) : (
+              <div className="aspect-video bg-black/40 flex items-center justify-center flex-col">
+                <FileVideo className="h-16 w-16 text-aptosGray mb-2" />
+                <p className="text-aptosGray">Video Player would be embedded here</p>
+              </div>
+            )}
           </div>
         );
       default:
@@ -147,12 +292,12 @@ const ContentView = () => {
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="mb-8">
           <div className="flex items-center gap-2 text-aptosGray mb-2">
-            <span>Created by {content?.creatorName}</span>
+            <span>Creator: {content.creator.wallet_address.substring(0, 6)}...{content.creator.wallet_address.substring(content.creator.wallet_address.length - 4)}</span>
             <span>•</span>
             <span>Requires NFT</span>
           </div>
-          <h1 className="text-3xl font-bold mb-4">{content?.title}</h1>
-          <p className="text-aptosGray">{content?.description}</p>
+          <h1 className="text-3xl font-bold mb-4">{content.title}</h1>
+          <p className="text-aptosGray">{content.description}</p>
         </div>
         
         {renderContentPreview()}

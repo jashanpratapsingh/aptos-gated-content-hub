@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Lock, FileVideo, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
 
 interface ContentCardProps {
   title: string;
@@ -25,22 +26,19 @@ export const ContentCard = ({
 }: ContentCardProps) => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
   
-  const handleUnlock = () => {
-    setLoading(true);
-    
-    // Simulate NFT verification process
-    setTimeout(() => {
-      setLoading(false);
-      
+  const handleViewContent = () => {
+    if (!contentUrl) {
       toast({
-        title: isLocked ? "Access Denied" : "Content Unlocked",
-        description: isLocked 
-          ? "You don't hold the required NFT to access this content." 
-          : "You now have access to this exclusive content!",
-        variant: isLocked ? "destructive" : "default",
+        title: "Content Unavailable",
+        description: "This content cannot be accessed at the moment.",
+        variant: "destructive",
       });
-    }, 1500);
+      return;
+    }
+    
+    navigate(contentUrl);
   };
   
   const getContentIcon = () => {
@@ -88,12 +86,12 @@ export const ContentCard = ({
         
         <div className="mt-4">
           <Button
-            onClick={handleUnlock}
+            onClick={handleViewContent}
             disabled={loading}
             className={isLocked ? "w-full" : "aptos-btn w-full"}
             variant={isLocked ? "outline" : "default"}
           >
-            {loading ? "Verifying..." : (isLocked ? "Verify NFT Ownership" : "Access Content")}
+            {loading ? "Loading..." : "View Content"}
           </Button>
         </div>
       </div>

@@ -1,63 +1,71 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Layout } from '../components/Layout';
 import { ContentCard } from '../components/ContentCard';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { supabase } from '@/integrations/supabase/client';
+import { Loader2 } from 'lucide-react';
 
-// Mock data for content items
-const contentItems = [
-  {
-    id: '1',
-    title: 'Exclusive Aptos Development Guide',
-    description: 'Learn how to build on Aptos blockchain with this comprehensive development guide.',
-    nftCollection: '0x1234...abcd',
-    contentType: 'pdf' as const,
-    thumbnail: 'https://images.unsplash.com/photo-1526304640581-d334cdbbf45e',
-    isLocked: true,
-  },
-  {
-    id: '2',
-    title: 'NFT Market Analysis',
-    description: 'Deep dive into the current state of NFT markets with expert insights.',
-    nftCollection: '0x5678...efgh',
-    contentType: 'video' as const,
-    thumbnail: 'https://images.unsplash.com/photo-1620641788421-7a1c342ea42e',
-    isLocked: true,
-  },
-  {
-    id: '4',
-    title: 'Aptos Move Advanced Tutorial',
-    description: 'Advanced tutorial on Move programming language for Aptos blockchain.',
-    nftCollection: '0xdef0...mnop',
-    contentType: 'pdf' as const,
-    thumbnail: 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31',
-    isLocked: true,
-  },
-  {
-    id: '6',
-    title: 'Creator Workshop Recording',
-    description: 'Workshop on creating successful NFT projects on the Aptos blockchain.',
-    nftCollection: '0x5678...uvwx',
-    contentType: 'video' as const,
-    thumbnail: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f',
-    isLocked: true,
-  },
-];
+interface ContentItem {
+  id: string;
+  title: string;
+  description: string;
+  content_type: 'pdf' | 'video';
+  nft_collection_address: string;
+  views: number;
+}
 
 const Explore = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [contentItems, setContentItems] = useState<ContentItem[]>([]);
+  
+  useEffect(() => {
+    loadContent();
+  }, []);
+  
+  const loadContent = async () => {
+    try {
+      setLoading(true);
+      
+      const { data, error } = await supabase
+        .from('content')
+        .select('id, title, description, content_type, nft_collection_address, views')
+        .order('created_at', { ascending: false });
+        
+      if (error) throw error;
+      
+      setContentItems(data as ContentItem[]);
+    } catch (error) {
+      console.error('Error loading content:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
   
   const filteredItems = contentItems.filter(item => {
     const matchesSearch = !searchTerm || 
       item.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
       item.description.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesType = !selectedType || item.contentType === selectedType;
+    const matchesType = !selectedType || item.content_type === selectedType;
     
     return matchesSearch && matchesType;
   });
+  
+  // Generate a random thumbnail URL for each item
+  const getThumbnailUrl = (contentType: string, id: string) => {
+    const imageIds = [
+      'photo-1526304640581-d334cdbbf45e',
+      'photo-1620641788421-7a1c342ea42e',
+      'photo-1558494949-ef010cbdcc31',
+      'photo-1550745165-9bc0b252726f'
+    ];
+    const index = Math.abs(id.charCodeAt(0) + id.charCodeAt(id.length - 1)) % imageIds.length;
+    return `https://images.unsplash.com/${imageIds[index]}`;
+  };
   
   return (
     <Layout>
@@ -102,10 +110,23 @@ const Explore = () => {
         </div>
         
         {/* Content grid */}
-        {filteredItems.length > 0 ? (
+        {loading ? (
+          <div className="flex justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-aptosCyan" />
+          </div>
+        ) : filteredItems.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredItems.map((item) => (
-              <ContentCard key={item.id} {...item} />
+              <ContentCard 
+                key={item.id}
+                title={item.title}
+                description={item.description}
+                nftCollection={item.nft_collection_address}
+                contentType={item.content_type}
+                thumbnail={getThumbnailUrl(item.content_type, item.id)}
+                isLocked={true}
+                contentUrl={`/content/${item.id}`}
+              />
             ))}
           </div>
         ) : (
