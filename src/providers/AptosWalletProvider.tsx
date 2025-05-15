@@ -14,7 +14,7 @@ export const AptosWalletProvider: React.FC<AptosWalletProviderProps> = ({ childr
   
   return (
     <AptosWalletAdapterProvider
-      plugins={wallets}
+      plugins={wallets as any} // Type assertion to bypass type mismatch
       autoConnect={true}
       onError={(error) => {
         console.log("Wallet adapter error:", error);

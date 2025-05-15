@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { useWallet } from '@aptos-labs/wallet-adapter-react';
+import { useWallet, WalletName } from '@aptos-labs/wallet-adapter-react';
 
 export const WalletSelector = () => {
   const [showWallets, setShowWallets] = useState(false);
@@ -45,7 +45,8 @@ export const WalletSelector = () => {
   const handleConnectWallet = async (walletName: string) => {
     try {
       console.log(`Attempting to connect to wallet: ${walletName}`);
-      await connect(walletName);
+      // Cast the string to WalletName type to satisfy TypeScript
+      await connect(walletName as WalletName);
       setShowWallets(false);
       
       toast({
