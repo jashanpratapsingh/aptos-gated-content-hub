@@ -1,13 +1,158 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+
+import React from 'react';
+import { Button } from '@/components/ui/button';
+import { Layout } from '../components/Layout';
+import { ParticleBackground } from '../components/ParticleBackground';
+import { ContentCard } from '../components/ContentCard';
+import { Link } from 'react-router-dom';
+
+const featuredContent = [
+  {
+    id: '1',
+    title: 'Exclusive Aptos Development Guide',
+    description: 'Learn how to build on Aptos blockchain with this comprehensive development guide.',
+    nftCollection: '0x1234...abcd',
+    contentType: 'pdf' as const,
+    thumbnail: 'https://images.unsplash.com/photo-1526304640581-d334cdbbf45e',
+    isLocked: true,
+  },
+  {
+    id: '2',
+    title: 'NFT Market Analysis',
+    description: 'Deep dive into the current state of NFT markets with expert insights.',
+    nftCollection: '0x5678...efgh',
+    contentType: 'video' as const,
+    thumbnail: 'https://images.unsplash.com/photo-1620641788421-7a1c342ea42e',
+    isLocked: true,
+  },
+  {
+    id: '3',
+    title: 'Private Discord Community',
+    description: 'Join our exclusive Discord community for NFT collectors and creators.',
+    nftCollection: '0x9abc...ijkl',
+    contentType: 'link' as const,
+    thumbnail: 'https://images.unsplash.com/photo-1614680376573-df3480f0c6ff',
+    isLocked: true,
+  },
+];
 
 const Index = () => {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-gray-600">Start building your amazing project here!</p>
+    <Layout transparentNavbar>
+      {/* Hero Section */}
+      <div className="relative min-h-screen flex items-center">
+        <ParticleBackground />
+        <div className="container mx-auto px-4 z-10 pt-16">
+          <div className="max-w-3xl mx-auto text-center">
+            <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-aptosCyan to-aptosPurple bg-clip-text text-transparent">
+              Unlock Exclusive Content with NFTs on Aptos
+            </h1>
+            <p className="text-xl md:text-2xl text-aptosGray mb-8">
+              Own the keys to exclusive content. Connect your Aptos wallet and gain access to premium resources, videos, and communities.
+            </p>
+            <div className="flex flex-col sm:flex-row justify-center gap-4">
+              <Button as={Link} to="/explore" className="aptos-btn text-lg py-6 px-8">
+                Get Started
+              </Button>
+              <Button as={Link} to="/dashboard" variant="outline" className="border-aptosCyan text-white hover:bg-aptosCyan/20 text-lg py-6 px-8">
+                Create Content
+              </Button>
+            </div>
+          </div>
+          
+          {/* Floating NFT Card */}
+          <div className="mt-16 md:mt-24 animate-float">
+            <div className="max-w-xs mx-auto frosted-glass p-6 rounded-xl border border-white/20 shadow-[0_8px_30px_rgb(0,255,163,0.12)]">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-r from-aptosCyan to-aptosPurple" />
+                  <h3 className="ml-2 font-bold">Premium Access</h3>
+                </div>
+                <div className="text-xs bg-aptosPurple/20 text-aptosPurple px-2 py-1 rounded-full">
+                  NFT Gated
+                </div>
+              </div>
+              <div className="h-32 bg-black/40 rounded-md flex items-center justify-center">
+                <Lock className="h-8 w-8 text-white/60" />
+              </div>
+              <div className="mt-4">
+                <div className="h-4 w-3/4 bg-white/20 rounded mb-2"></div>
+                <div className="h-4 w-1/2 bg-white/20 rounded"></div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
+      
+      {/* Featured Content Section */}
+      <div className="container mx-auto px-4 py-16">
+        <h2 className="text-3xl font-bold mb-2">Featured Content</h2>
+        <p className="text-aptosGray mb-8">Discover premium content unlockable with Aptos NFTs</p>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {featuredContent.map((content) => (
+            <ContentCard 
+              key={content.id}
+              {...content}
+            />
+          ))}
+        </div>
+        
+        <div className="mt-12 text-center">
+          <Button as={Link} to="/explore" variant="outline" className="border-aptosCyan text-white hover:bg-aptosCyan/20">
+            View All Content
+          </Button>
+        </div>
+      </div>
+      
+      {/* How It Works */}
+      <div className="bg-black/30 py-16">
+        <div className="container mx-auto px-4">
+          <h2 className="text-3xl font-bold mb-12 text-center">How It Works</h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="text-center">
+              <div className="w-16 h-16 mx-auto rounded-full bg-aptosCyan/20 flex items-center justify-center mb-4">
+                <span className="text-2xl">💼</span>
+              </div>
+              <h3 className="text-xl font-semibold mb-2">Connect Wallet</h3>
+              <p className="text-aptosGray">Connect your Aptos wallet to verify your NFT ownership.</p>
+            </div>
+            
+            <div className="text-center">
+              <div className="w-16 h-16 mx-auto rounded-full bg-aptosCyan/20 flex items-center justify-center mb-4">
+                <span className="text-2xl">🔍</span>
+              </div>
+              <h3 className="text-xl font-semibold mb-2">Verify NFTs</h3>
+              <p className="text-aptosGray">We'll check if you own the required NFTs for the content.</p>
+            </div>
+            
+            <div className="text-center">
+              <div className="w-16 h-16 mx-auto rounded-full bg-aptosCyan/20 flex items-center justify-center mb-4">
+                <span className="text-2xl">🚀</span>
+              </div>
+              <h3 className="text-xl font-semibold mb-2">Access Content</h3>
+              <p className="text-aptosGray">Instantly unlock and access exclusive creator content.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      {/* CTA Section */}
+      <div className="container mx-auto px-4 py-16">
+        <div className="frosted-glass p-8 md:p-12 rounded-2xl">
+          <div className="flex flex-col md:flex-row items-center justify-between">
+            <div className="mb-6 md:mb-0">
+              <h2 className="text-2xl md:text-3xl font-bold mb-2">Ready to share exclusive content?</h2>
+              <p className="text-aptosGray">Create and gate your content with NFTs in minutes.</p>
+            </div>
+            <Button as={Link} to="/dashboard" className="aptos-btn">
+              Start Creating
+            </Button>
+          </div>
+        </div>
+      </div>
+    </Layout>
   );
 };
 

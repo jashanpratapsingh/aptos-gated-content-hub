@@ -1,0 +1,104 @@
+
+import React, { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Lock } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+
+interface ContentCardProps {
+  title: string;
+  description: string;
+  nftCollection: string;
+  contentType: 'pdf' | 'video' | 'link';
+  thumbnail: string;
+  isLocked: boolean;
+  contentUrl?: string;
+}
+
+export const ContentCard = ({
+  title,
+  description,
+  nftCollection,
+  contentType,
+  thumbnail,
+  isLocked,
+  contentUrl
+}: ContentCardProps) => {
+  const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
+  
+  const handleUnlock = () => {
+    setLoading(true);
+    
+    // Simulate NFT verification process
+    setTimeout(() => {
+      setLoading(false);
+      
+      toast({
+        title: isLocked ? "Access Denied" : "Content Unlocked",
+        description: isLocked 
+          ? "You don't hold the required NFT to access this content." 
+          : "You now have access to this exclusive content!",
+        variant: isLocked ? "destructive" : "default",
+      });
+    }, 1500);
+  };
+  
+  const getContentIcon = () => {
+    switch (contentType) {
+      case 'pdf':
+        return "📄";
+      case 'video':
+        return "🎬";
+      case 'link':
+        return "🔗";
+      default:
+        return "📁";
+    }
+  };
+  
+  return (
+    <div className="aptos-card overflow-hidden">
+      <div className="relative h-48">
+        <img 
+          src={thumbnail || "/placeholder.svg"} 
+          alt={title} 
+          className="w-full h-full object-cover"
+        />
+        {isLocked && (
+          <div className="absolute inset-0 frosted-glass flex items-center justify-center">
+            <Lock className="w-12 h-12 text-white/70" />
+          </div>
+        )}
+        <div className="absolute top-4 right-4 bg-card px-2 py-1 rounded-md text-sm">
+          {getContentIcon()} {contentType.toUpperCase()}
+        </div>
+      </div>
+      
+      <div className="p-4">
+        <h3 className="text-lg font-semibold text-white">{title}</h3>
+        <p className="text-aptosGray mt-2 text-sm line-clamp-2">{description}</p>
+        
+        <div className="mt-4 flex items-center">
+          <div className="w-8 h-8 rounded-full bg-aptosCyan flex items-center justify-center text-xs">
+            NFT
+          </div>
+          <div className="ml-2">
+            <p className="text-xs text-aptosGray">Required NFT Collection</p>
+            <p className="text-xs text-white font-mono truncate max-w-[200px]">{nftCollection}</p>
+          </div>
+        </div>
+        
+        <div className="mt-4">
+          <Button
+            onClick={handleUnlock}
+            disabled={loading}
+            className={isLocked ? "w-full" : "aptos-btn w-full"}
+            variant={isLocked ? "outline" : "default"}
+          >
+            {loading ? "Verifying..." : (isLocked ? "Verify NFT Ownership" : "Access Content")}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
