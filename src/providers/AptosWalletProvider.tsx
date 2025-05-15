@@ -11,7 +11,7 @@ export const AptosWalletProvider: React.FC<AptosWalletProviderProps> = ({ childr
   return (
     <AptosWalletAdapterProvider
       autoConnect={true}
-      network={Network.MAINNET}
+      plugins={[]} // Initialize with an empty array if no specific plugins needed
       onError={(error) => {
         console.log("Wallet adapter error:", error);
       }}
