@@ -11,7 +11,7 @@ export const AptosWalletProvider: React.FC<AptosWalletProviderProps> = ({ childr
   return (
     <AptosWalletAdapterProvider
       autoConnect={true}
-      dappConfig={{ network: Network.MAINNET }}
+      network={Network.MAINNET}
       onError={(error) => {
         console.log("Wallet adapter error:", error);
       }}

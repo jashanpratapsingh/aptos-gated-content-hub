@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { useWallet, groupAndSortWallets } from '@aptos-labs/wallet-adapter-react';
+import { useWallet, WalletName } from '@aptos-labs/wallet-adapter-react';
 
 export const WalletSelector = () => {
   const [showWallets, setShowWallets] = useState(false);
@@ -12,13 +12,16 @@ export const WalletSelector = () => {
     disconnect, 
     account, 
     connected,
-    wallets,
-    notDetectedWallets
+    wallets
   } = useWallet();
 
-  // Group and sort wallets for better display
-  const { availableWallets, installableWallets } = groupAndSortWallets(
-    [...wallets, ...notDetectedWallets]
+  // Sort wallets for better display
+  const availableWallets = wallets.filter(wallet => 
+    wallet.readyState === 'Installed' || wallet.readyState === 'Loadable'
+  );
+  
+  const installableWallets = wallets.filter(wallet => 
+    wallet.readyState === 'NotDetected'
   );
 
   // Close wallet dropdown when clicking outside
@@ -39,7 +42,7 @@ export const WalletSelector = () => {
     return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
   };
 
-  const handleConnectWallet = async (walletName: string) => {
+  const handleConnectWallet = async (walletName: WalletName) => {
     try {
       await connect(walletName);
       setShowWallets(false);
