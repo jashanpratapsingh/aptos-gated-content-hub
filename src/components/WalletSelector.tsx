@@ -51,31 +51,56 @@ export const WalletSelector = () => {
     return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
   };
 
+  // Clean up Supabase auth state
+  const cleanupAuthState = () => {
+    localStorage.removeItem('supabase.auth.token');
+    Object.keys(localStorage).forEach((key) => {
+      if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
+        localStorage.removeItem(key);
+      }
+    });
+    Object.keys(sessionStorage || {}).forEach((key) => {
+      if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
+        sessionStorage.removeItem(key);
+      }
+    });
+  };
+
   // Handle authentication with Supabase
   const handleAuthentication = async (address: string) => {
     try {
       setAuthenticating(true);
       
-      // Generate email and password based on wallet address
-      const emailAddress = `${address.toLowerCase()}@aptos-wallet.user`;
-      const nonce = Math.floor(Math.random() * 1000000).toString();
-      const password = `${address.toLowerCase()}-${nonce}`;
+      // Clean up existing auth state
+      cleanupAuthState();
       
-      // Check if an account with this wallet address already exists
+      // Try to sign out globally first
+      try {
+        await supabase.auth.signOut({ scope: 'global' });
+      } catch (err) {
+        // Continue even if this fails
+        console.log("Global sign out failed, continuing with authentication");
+      }
+      
+      // Check if a profile with this wallet address already exists
       const { data: existingProfiles } = await supabase
         .from('profiles')
         .select('id')
         .eq('wallet_address', address)
         .limit(1);
       
-      // No existing profile - create a new account first
+      // Generate deterministic email and password based on wallet address
+      // This makes the credentials consistent for the same wallet
+      const emailAddress = `${address.toLowerCase()}@aptos-wallet.user`;
+      const password = `${address.toLowerCase()}#WalletAuth!2025`;
+      
       if (!existingProfiles || existingProfiles.length === 0) {
+        // No existing profile - create a new account
         console.log("No existing profile found, creating new account");
         
-        // Create a new user account
         const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
           email: emailAddress,
-          password,
+          password: password,
         });
         
         if (signUpError) {
@@ -104,40 +129,54 @@ export const WalletSelector = () => {
         // Profile exists - sign in to the existing account
         console.log("Existing profile found, signing in");
         
-        // Try to sign in with a generated password
-        // Note: Since we don't store the original password, we'll create a new one
-        // and update the account with it
-        
-        // First, let's try to sign in with the new password
         const { error: signInError } = await supabase.auth.signInWithPassword({
           email: emailAddress,
-          password,
+          password: password,
         });
         
         if (signInError) {
-          console.log("Sign-in failed, updating password for existing user");
+          console.log("Sign-in failed, attempting alternative authentication");
           
-          // Reset password for the email address
-          const { error: resetError } = await supabase.auth.resetPasswordForEmail(
-            emailAddress,
-            { redirectTo: window.location.origin }
-          );
-          
-          if (resetError) {
-            console.error("Error resetting password:", resetError);
-            throw resetError;
-          }
-          
-          // After resetting password, we'll try signing up again as a new user
-          // This is a workaround since we don't have access to update the password directly
-          const { data: newSignUpData, error: newSignUpError } = await supabase.auth.signUp({
+          // If sign in fails, try to sign up anyway (this could happen if the account exists
+          // but the password has changed or was created with a different algorithm)
+          const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
             email: emailAddress,
-            password,
+            password: password,
           });
           
-          if (newSignUpError) {
-            console.error("Error with new sign up after password reset:", newSignUpError);
-            throw new Error("Couldn't authenticate with existing wallet. Please try again later.");
+          if (signUpError) {
+            // If sign up also fails, we need to reset the password
+            console.log("Sign-up failed, attempting password reset");
+            
+            const { error: resetError } = await supabase.auth.resetPasswordForEmail(
+              emailAddress,
+              { redirectTo: window.location.origin }
+            );
+            
+            if (resetError) {
+              console.error("Error resetting password:", resetError);
+              throw new Error("Couldn't authenticate with wallet. Please try again later.");
+            }
+            
+            // Try signing in one more time
+            const { error: finalSignInError } = await supabase.auth.signInWithPassword({
+              email: emailAddress,
+              password: password,
+            });
+            
+            if (finalSignInError) {
+              console.error("Final sign-in attempt failed:", finalSignInError);
+              throw new Error("Authentication failed. Please disconnect and try again.");
+            }
+          }
+          
+          // Make sure the wallet address is updated in the profile
+          const { data: userData } = await supabase.auth.getUser();
+          if (userData && userData.user) {
+            await supabase
+              .from('profiles')
+              .update({ wallet_address: address })
+              .eq('id', userData.user.id);
           }
         }
         
@@ -186,8 +225,9 @@ export const WalletSelector = () => {
     try {
       await disconnect();
       
-      // Sign out from Supabase as well
-      await supabase.auth.signOut();
+      // Sign out from Supabase and clean up auth state
+      await supabase.auth.signOut({ scope: 'global' });
+      cleanupAuthState();
       
       toast({
         title: "Wallet Disconnected",

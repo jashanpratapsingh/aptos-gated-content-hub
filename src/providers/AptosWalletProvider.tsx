@@ -33,25 +33,27 @@ export const AptosWalletProvider: React.FC<AptosWalletProviderProps> = ({ childr
   useEffect(() => {
     const checkAuthState = async () => {
       try {
+        // Set up auth state listener FIRST
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+          setIsAuthenticated(!!session);
+          console.log("Auth state changed:", event, !!session);
+        });
+        
+        // THEN check for existing session
         const { data: { session } } = await supabase.auth.getSession();
         setIsAuthenticated(!!session);
+        setIsLoading(false);
+        
+        return () => {
+          subscription.unsubscribe();
+        };
       } catch (error) {
         console.error("Error checking auth state:", error);
-      } finally {
         setIsLoading(false);
       }
     };
     
     checkAuthState();
-    
-    // Listen for auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      setIsAuthenticated(!!session);
-    });
-    
-    return () => {
-      subscription.unsubscribe();
-    };
   }, []);
   
   return (
