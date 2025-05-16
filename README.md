@@ -1,6 +1,10 @@
 
 # AptosGate - NFT-Gated Content Platform
 
+[![AptosGate Demo Video](https://img.youtube.com/vi/FYqaxV1Wwlo/0.jpg)](https://www.youtube.com/watch?v=FYqaxV1Wwlo)
+
+*Click the image above to watch the demo video*
+
 AptosGate is a modern web application that provides access to exclusive content based on NFT ownership verification on the Aptos blockchain. The platform allows creators to gate their premium content (PDFs, videos, etc.) behind NFT ownership requirements.
 
 ## Features
