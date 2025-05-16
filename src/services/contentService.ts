@@ -30,18 +30,23 @@ export const useContentService = () => {
         throw new Error('Profile not found');
       }
       
-      // Get content items without using order method
-      const { data, error } = await jsonStorageClient
-        .from('content')
-        .select()
-        .eq('creator_id', profile.id);
-        
-      if (error) throw error;
-      
-      // Sort the content manually after fetching
-      return (data as ContentItem[]).sort((a, b) => 
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      );
+      // Use the proper then() method to get data from the JSON storage client
+      return new Promise((resolve, reject) => {
+        jsonStorageClient
+          .from('content')
+          .select()
+          .eq('creator_id', profile.id)
+          .then((result) => {
+            if (result.error) {
+              reject(result.error);
+            } else {
+              // Sort the content manually after fetching
+              const sortedData = (result.data as ContentItem[])
+                .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+              resolve(sortedData);
+            }
+          });
+      });
     } catch (error: any) {
       toast({
         title: 'Error fetching content',
