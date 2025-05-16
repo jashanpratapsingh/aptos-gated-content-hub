@@ -1,43 +1,49 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Layout } from '../components/Layout';
 import { ParticleBackground } from '../components/ParticleBackground';
 import { ContentCard } from '../components/ContentCard';
 import { Link } from 'react-router-dom';
-import { Lock } from 'lucide-react';
-
-const featuredContent = [
-  {
-    id: '1',
-    title: 'Exclusive Aptos Development Guide',
-    description: 'Learn how to build on Aptos blockchain with this comprehensive development guide.',
-    nftCollection: '0x1234...abcd',
-    contentType: 'pdf' as const,
-    thumbnail: 'https://images.unsplash.com/photo-1526304640581-d334cdbbf45e',
-    isLocked: true,
-  },
-  {
-    id: '2',
-    title: 'NFT Market Analysis',
-    description: 'Deep dive into the current state of NFT markets with expert insights.',
-    nftCollection: '0x5678...efgh',
-    contentType: 'video' as const,
-    thumbnail: 'https://images.unsplash.com/photo-1620641788421-7a1c342ea42e',
-    isLocked: true,
-  },
-  {
-    id: '3',
-    title: 'Advanced Aptos Move Tutorial',
-    description: 'Learn advanced Move programming concepts for building on Aptos blockchain.',
-    nftCollection: '0x9abc...ijkl',
-    contentType: 'pdf' as const,
-    thumbnail: 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31',
-    isLocked: true,
-  },
-];
+import { Lock, Loader2 } from 'lucide-react';
+import { useContentService, type ContentItem } from '@/services/contentService';
 
 const Index = () => {
+  const [featuredContent, setFeaturedContent] = useState<ContentItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { getUserContent } = useContentService();
+
+  useEffect(() => {
+    const loadFeaturedContent = async () => {
+      try {
+        setLoading(true);
+        const allContent = await getUserContent();
+        
+        // Get up to 3 most recent pieces of content
+        const featured = allContent.slice(0, 3);
+        setFeaturedContent(featured);
+      } catch (error) {
+        console.error("Error loading featured content:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadFeaturedContent();
+  }, []);
+
+  // Generate a thumbnail URL for content
+  const getThumbnailUrl = (contentType: string, id: string) => {
+    const imageIds = [
+      'photo-1526304640581-d334cdbbf45e',
+      'photo-1620641788421-7a1c342ea42e',
+      'photo-1558494949-ef010cbdcc31',
+      'photo-1550745165-9bc0b252726f'
+    ];
+    const index = Math.abs(id.charCodeAt(0) + id.charCodeAt(id.length - 1)) % imageIds.length;
+    return `https://images.unsplash.com/${imageIds[index]}`;
+  };
+
   return (
     <Layout transparentNavbar>
       {/* Hero Section */}
@@ -90,14 +96,36 @@ const Index = () => {
         <h2 className="text-3xl font-bold mb-2">Featured Content</h2>
         <p className="text-aptosGray mb-8">Discover premium content unlockable with Aptos NFTs</p>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {featuredContent.map((content) => (
-            <ContentCard 
-              key={content.id}
-              {...content}
-            />
-          ))}
-        </div>
+        {loading ? (
+          <div className="flex justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-aptosCyan" />
+          </div>
+        ) : featuredContent.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {featuredContent.map((content) => (
+              <ContentCard 
+                key={content.id}
+                title={content.title}
+                description={content.description || ''}
+                nftCollection={content.nft_collection_address}
+                contentType={content.content_type}
+                thumbnail={getThumbnailUrl(content.content_type, content.id)}
+                isLocked={true}
+                contentUrl={`/content/${content.id}`}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-lg border border-border bg-card p-8 text-center mb-6">
+            <h3 className="text-xl font-semibold mb-2">No content available yet</h3>
+            <p className="text-aptosGray mb-2">
+              Be the first to create exclusive content!
+            </p>
+            <Button className="mt-4" asChild>
+              <Link to="/dashboard">Create Content</Link>
+            </Button>
+          </div>
+        )}
         
         <div className="mt-12 text-center">
           <Button variant="outline" className="border-aptosCyan text-white hover:bg-aptosCyan/20" asChild>

@@ -46,15 +46,7 @@ export type Database = {
           updated_at?: string
           views?: number | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "content_creator_id_fkey"
-            columns: ["creator_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       content_access_logs: {
         Row: {

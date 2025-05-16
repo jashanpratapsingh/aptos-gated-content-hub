@@ -1,21 +1,14 @@
+
 import React, { useState, useEffect } from 'react';
 import { Layout } from '../components/Layout';
 import { ContentCard } from '../components/ContentCard';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { jsonStorageClient } from '@/integrations/jsonStorage/client';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useAuth } from '@/providers/AptosWalletProvider';
-
-interface ContentItem {
-  id: string;
-  title: string;
-  description: string;
-  content_type: 'pdf' | 'video';
-  nft_collection_address: string;
-  views: number;
-}
+import { supabase } from '@/integrations/supabase/client';
+import { useContentService, type ContentItem } from '@/services/contentService';
 
 const Explore = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -24,6 +17,7 @@ const Explore = () => {
   const [contentItems, setContentItems] = useState<ContentItem[]>([]);
   const [error, setError] = useState<string | null>(null);
   const { isAuthenticated } = useAuth();
+  const { getUserContent } = useContentService();
   
   useEffect(() => {
     loadContent();
@@ -34,13 +28,8 @@ const Explore = () => {
       setLoading(true);
       setError(null);
       
-      const { data, error } = await jsonStorageClient
-        .from('content')
-        .select();
-        
-      if (error) throw error;
-      
-      setContentItems(data as ContentItem[]);
+      const data = await getUserContent();
+      setContentItems(data);
     } catch (error: any) {
       console.error('Error loading content:', error);
       setError(error.message || 'Failed to load content');
@@ -52,14 +41,14 @@ const Explore = () => {
   const filteredItems = contentItems.filter(item => {
     const matchesSearch = !searchTerm || 
       item.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      item.description.toLowerCase().includes(searchTerm.toLowerCase());
+      item.description?.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesType = !selectedType || item.content_type === selectedType;
     
     return matchesSearch && matchesType;
   });
   
-  // Generate a random thumbnail URL for each item
+  // Generate a thumbnail URL for content
   const getThumbnailUrl = (contentType: string, id: string) => {
     const imageIds = [
       'photo-1526304640581-d334cdbbf45e',
@@ -145,7 +134,7 @@ const Explore = () => {
               <ContentCard 
                 key={item.id}
                 title={item.title}
-                description={item.description}
+                description={item.description || ''}
                 nftCollection={item.nft_collection_address}
                 contentType={item.content_type}
                 thumbnail={getThumbnailUrl(item.content_type, item.id)}
