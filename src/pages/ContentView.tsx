@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Layout } from '../components/Layout';
 import { Button } from '@/components/ui/button';
 import { Lock, FileVideo, FileText, Loader2 } from 'lucide-react';
@@ -27,18 +26,64 @@ interface Content {
 const ContentView = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const [content, setContent] = useState<Content | null>(null);
   const [contentUrl, setContentUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [isNftOwner, setIsNftOwner] = useState(false);
   const [verifying, setVerifying] = useState(false);
+  const [hasRefreshed, setHasRefreshed] = useState(false);
   const { toast } = useToast();
   const { account, connected } = useWallet();
   const { verifyNftOwnership } = useAptosService();
   const { logContentAccess } = useContentService();
   
+  // Add refresh logic for navigation from other pages
   useEffect(() => {
-    if (id) {
+    // Check if this is the first load (not a refresh)
+    const isFirstLoad = !hasRefreshed && !sessionStorage.getItem('content_page_refreshed');
+    
+    if (isFirstLoad) {
+      console.log("First visit to content page, will refresh after delay");
+      // Set a flag in session storage to indicate we're about to refresh
+      sessionStorage.setItem('content_page_refreshed', 'true');
+      
+      // Show a toast to inform the user
+      toast({
+        title: "Loading Content",
+        description: "Initializing content viewer...",
+      });
+      
+      // Set a timeout to refresh the page after 5 seconds
+      const timer = setTimeout(() => {
+        console.log("Performing delayed refresh");
+        window.location.reload();
+      }, 5000);
+      
+      return () => {
+        clearTimeout(timer);
+      };
+    } else {
+      // If this is a refresh or subsequent visit, load content normally
+      console.log("Content page refreshed or revisited, loading normally");
+      setHasRefreshed(true);
+      
+      // Clean up the session storage flag when component unmounts
+      return () => {
+        sessionStorage.removeItem('content_page_refreshed');
+      };
+    }
+  }, [location.pathname, toast]);
+  
+  useEffect(() => {
+    if (id && hasRefreshed) {
+      loadContent(id);
+    }
+  }, [id, hasRefreshed]);
+  
+  // On initial navigation or refresh, check if we should load content immediately
+  useEffect(() => {
+    if (id && (hasRefreshed || sessionStorage.getItem('content_page_refreshed'))) {
       loadContent(id);
     }
   }, [id]);
@@ -262,11 +307,12 @@ const ContentView = () => {
     }
   };
   
-  if (loading) {
+  if (loading && !hasRefreshed) {
     return (
       <Layout>
-        <div className="container mx-auto px-4 py-12 flex justify-center">
-          <div className="w-8 h-8 border-4 border-aptosCyan border-t-transparent rounded-full animate-spin"></div>
+        <div className="container mx-auto px-4 py-12 flex flex-col items-center justify-center">
+          <div className="w-8 h-8 border-4 border-aptosCyan border-t-transparent rounded-full animate-spin mb-4"></div>
+          <p className="text-aptosGray">Preparing content viewer...</p>
         </div>
       </Layout>
     );
