@@ -54,10 +54,24 @@ export const WalletSelector = () => {
 
   // Create a consistent, secure password that's shorter than 72 characters
   const createConsistentPassword = (address: string) => {
-    // Create SHA-256 hash of the wallet address (will always be 64 chars)
-    const hash = createHash('sha256').update(address.toLowerCase()).digest('hex');
-    // Add some fixed salt and return 64 chars (well under the 72 char limit)
-    return `${hash.substring(0, 32)}WalletAuth${hash.substring(32, 52)}`;
+    try {
+      // Create SHA-256 hash of the wallet address (will always be 64 chars)
+      const hash = createHash('sha256').update(address.toLowerCase()).digest('hex');
+      // Add some fixed salt and return 64 chars (well under the 72 char limit)
+      return `${hash.substring(0, 32)}WalletAuth${hash.substring(32, 52)}`;
+    } catch (error) {
+      console.error("Error creating password hash:", error);
+      // Fallback method if crypto fails in the browser
+      let hash = 0;
+      for (let i = 0; i < address.length; i++) {
+        const char = address.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // Convert to 32bit integer
+      }
+      // Create a hex string and ensure it's positive
+      const hexHash = Math.abs(hash).toString(16).padStart(8, '0');
+      return `Wallet${hexHash}Auth${address.substring(0, 8)}`;
+    }
   };
 
   // Clean up Supabase auth state
