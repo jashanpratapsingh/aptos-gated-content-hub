@@ -43,10 +43,15 @@ export const useAptosService = () => {
 
       // Check if any token belongs to the specified collection
       return response.some(token => {
-        // Extract the collection address from the token data
-        // Make sure we're accessing the correct property path based on the token data structure
-        const tokenData = token.current_token_data?.token_data_id;
-        const tokenCollectionId = tokenData ? tokenData.collection : '';
+        // Extract the collection address from the token data structure
+        // The token_data_id is an object that contains the collection information
+        const tokenDataId = token.current_token_data?.token_data_id;
+        
+        // Safely access the collection property if it exists in the structure
+        let tokenCollectionId = '';
+        if (tokenDataId && typeof tokenDataId === 'object' && 'collection' in tokenDataId) {
+          tokenCollectionId = tokenDataId.collection as string;
+        }
         
         // Compare with the specified collection address
         return tokenCollectionId && 
