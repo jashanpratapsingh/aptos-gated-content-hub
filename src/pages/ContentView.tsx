@@ -188,16 +188,14 @@ const ContentView = () => {
         return (
           <div className="aptos-card p-6 animate-fade-in">
             {contentUrl ? (
-              <div className="mb-4">
-                <PdfViewer 
-                  pdfUrl={contentUrl} 
-                  onDownload={() => contentUrl && window.open(contentUrl, '_blank')} 
-                />
-              </div>
+              <PdfViewer 
+                pdfUrl={contentUrl} 
+                onDownload={() => window.open(contentUrl, '_blank')} 
+              />
             ) : (
-              <div className="bg-black/40 rounded-lg p-4 h-[500px] flex items-center justify-center mb-4">
+              <div className="bg-black/40 rounded-lg p-4 h-[500px] flex items-center justify-center">
                 <FileText className="h-16 w-16 text-aptosGray mb-2" />
-                <p className="text-aptosGray">PDF Viewer would be embedded here</p>
+                <p className="text-aptosGray">PDF loading failed. Please try again.</p>
               </div>
             )}
           </div>

@@ -24,6 +24,7 @@ const PdfViewer = ({ pdfUrl, onDownload }: PdfViewerProps) => {
   const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
     setNumPages(numPages);
     setLoading(false);
+    console.log(`PDF loaded successfully with ${numPages} pages`);
   };
 
   const onDocumentLoadError = (error: Error) => {
@@ -40,6 +41,8 @@ const PdfViewer = ({ pdfUrl, onDownload }: PdfViewerProps) => {
     setPageNumber(prevPageNumber => Math.min(prevPageNumber + 1, numPages || 1));
   };
 
+  console.log('PdfViewer rendering with URL:', pdfUrl);
+
   return (
     <div className="pdf-viewer flex flex-col items-center w-full">
       {loading && (
@@ -54,13 +57,14 @@ const PdfViewer = ({ pdfUrl, onDownload }: PdfViewerProps) => {
         </div>
       )}
       
-      <ScrollArea className="w-full rounded-md border">
-        <div className="flex justify-center">
+      <ScrollArea className="w-full rounded-md border h-[600px]">
+        <div className="flex justify-center p-4">
           <Document
             file={pdfUrl}
             onLoadSuccess={onDocumentLoadSuccess}
             onLoadError={onDocumentLoadError}
             loading={<Loader2 className="h-8 w-8 animate-spin text-aptosCyan" />}
+            error={<p>Error loading PDF. Please try again.</p>}
           >
             <Page 
               pageNumber={pageNumber} 
@@ -99,12 +103,14 @@ const PdfViewer = ({ pdfUrl, onDownload }: PdfViewerProps) => {
             </Button>
           </div>
           
-          <Button 
-            className="aptos-btn" 
-            onClick={onDownload}
-          >
-            <Download className="h-4 w-4 mr-2" /> Download PDF
-          </Button>
+          {onDownload && (
+            <Button 
+              className="aptos-btn" 
+              onClick={onDownload}
+            >
+              <Download className="h-4 w-4 mr-2" /> Download PDF
+            </Button>
+          )}
         </div>
       )}
     </div>
