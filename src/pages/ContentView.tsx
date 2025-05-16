@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Layout } from '../components/Layout';
 import { Button } from '@/components/ui/button';
-import { Lock, FileVideo, FileText, Loader2 } from 'lucide-react';
+import { Lock, FileVideo, FileText, Loader2, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useWallet } from '@aptos-labs/wallet-adapter-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -343,6 +343,21 @@ const ContentView = () => {
         </div>
         
         {renderContentPreview()}
+        
+        <div className="mt-10 text-center p-6 bg-black/20 rounded-lg border border-white/10">
+          <h2 className="text-xl font-semibold mb-2 flex items-center justify-center gap-2">
+            <RefreshCw className="h-5 w-5" />
+            Content Not Loading?
+          </h2>
+          <p className="text-aptosGray">Try refreshing the page if the content keeps loading.</p>
+          <Button 
+            onClick={() => window.location.reload()} 
+            variant="outline" 
+            className="mt-4"
+          >
+            <RefreshCw className="h-4 w-4 mr-2" /> Refresh Page
+          </Button>
+        </div>
       </div>
     </Layout>
   );
