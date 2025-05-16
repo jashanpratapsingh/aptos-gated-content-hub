@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -115,13 +116,6 @@ export const WalletSelector = () => {
         console.log("Global sign out failed, continuing with authentication");
       }
       
-      // Check if a profile with this wallet address already exists
-      const { data: existingProfiles } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('wallet_address', address)
-        .limit(1);
-      
       // Create a hash of the wallet address to use as a unique identifier
       const hash = await createSHA256Hash(address);
       
@@ -129,16 +123,20 @@ export const WalletSelector = () => {
       // This is used only for Supabase auth and never exposed to the user
       const password = `Aptos_${hash.substring(0, 20)}`;
       
+      // Check if a profile with this wallet address already exists
+      const { data: existingProfiles } = await supabase
+        .from('profiles')
+        .select('id, wallet_address')
+        .eq('wallet_address', address)
+        .limit(1);
+      
       if (!existingProfiles || existingProfiles.length === 0) {
-        // No existing profile - create a new account
-        console.log("No existing profile found, creating new account");
+        // No existing profile - create a new account with wallet address directly
+        console.log("No existing profile found, creating new account with wallet address");
         
-        // Use the wallet address directly to create an account
-        // We'll use a UUID as username to avoid any validation issues
-        const uuid = crypto.randomUUID();
-        
+        // Use direct sign-up method without email
         const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-          email: `${uuid}@noreply.wallet.app`,
+          phone: `+${address.substring(2, 18)}`, // Use part of the wallet address as a "phone number"
           password: password,
         });
         
@@ -165,40 +163,32 @@ export const WalletSelector = () => {
           description: "Your wallet is now connected and authenticated.",
         });
       } else {
-        // Profile exists - sign in to the existing account
-        console.log("Existing profile found, signing in");
+        // Profile exists - sign in to the existing account using phone auth
+        console.log("Existing profile found, signing in with phone auth");
         
-        // We need to find the email associated with this wallet address
-        // First, get the user ID from the profile
+        // Get the user ID from the existing profile
         const userId = existingProfiles[0].id;
         
-        // Then, get the user's email from auth.users (via a function)
-        // Since we can't directly query auth.users, we'll use the wallet address
-        // and try different ways to authenticate
+        // Check if the profile has a phone number
+        const { data: userData } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', userId)
+          .single();
         
-        // Try to use a consistent format for the email based on user ID
-        const email = `${userId}@noreply.wallet.app`;
+        if (!userData) {
+          throw new Error("User profile not found");
+        }
         
+        // Sign in with phone and password
         const { error: signInError } = await supabase.auth.signInWithPassword({
-          email: email,
+          phone: `+${address.substring(2, 18)}`,
           password: password,
         });
         
         if (signInError) {
-          console.log("Sign-in failed, attempting alternative authentication");
-          
-          // If sign in fails, try with a UUID-based email
-          // This is a fallback mechanism
-          const uuid = crypto.randomUUID();
-          const { error: secondSignInError } = await supabase.auth.signInWithPassword({
-            email: `${uuid}@noreply.wallet.app`,
-            password: password,
-          });
-          
-          if (secondSignInError) {
-            console.error("Alternative sign-in failed:", secondSignInError);
-            throw new Error("Authentication failed. Please disconnect and try again.");
-          }
+          console.error("Sign-in failed:", signInError);
+          throw signInError;
         }
         
         toast({
