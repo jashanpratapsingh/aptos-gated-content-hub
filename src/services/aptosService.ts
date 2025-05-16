@@ -74,35 +74,68 @@ export const useAptosService = () => {
         return false;
       }
 
+      // Debug: Log the first few tokens to see their structure
+      console.log("Token sample:", JSON.stringify(response.slice(0, 2), null, 2));
+      
       // Check if any token belongs to the specified collection
-      return response.some(token => {
+      const result = response.some(token => {
         // Extract the collection address from the token data structure
         let tokenCollectionId = '';
+        let tokenCreator = '';
         
         // Try to get collection from different possible locations in the response
         if (token.current_token_data?.token_data_id?.collection) {
           // If token_data_id is an object with collection
           tokenCollectionId = token.current_token_data.token_data_id.collection;
+          tokenCreator = token.current_token_data.token_data_id.creator;
         } else if (token.collection) {
           // Some responses might have collection directly
           tokenCollectionId = token.collection;
+          tokenCreator = token.creator || '';
         } else if (typeof token.token_data_id === 'string' && token.token_data_id.includes('::')) {
           // Sometimes token_data_id is a string like "creator_address::collection_name::token_name"
           const parts = token.token_data_id.split('::');
           if (parts.length > 1) {
-            // The first part is typically the collection address
-            tokenCollectionId = parts[0];
+            // The first part is typically the creator address
+            tokenCreator = parts[0];
+            // The second part is typically the collection name
+            if (parts.length > 1) {
+              tokenCollectionId = parts[1];
+            }
           }
         }
         
         // Log the collection ID we found for debugging
+        console.log("Found token creator:", tokenCreator);
         console.log("Found token collection:", tokenCollectionId);
-        console.log("Comparing with:", formattedCollectionAddress);
         
-        // Compare with the specified collection address if we found a collection ID
-        return tokenCollectionId && 
-               tokenCollectionId.toLowerCase() === formattedCollectionAddress.toLowerCase();
+        // Try different comparison strategies:
+        
+        // 1. Direct comparison with collection address
+        const directMatch = tokenCollectionId && 
+                           tokenCollectionId.toLowerCase() === formattedCollectionAddress.toLowerCase();
+        
+        // 2. Compare with creator address (sometimes the collection is identified by creator address)
+        const creatorMatch = tokenCreator && 
+                            tokenCreator.toLowerCase() === formattedCollectionAddress.toLowerCase();
+        
+        // 3. Check if the token's token_data_id string contains the collection address
+        const containsMatch = typeof token.token_data_id === 'string' && 
+                             token.token_data_id.toLowerCase().includes(formattedCollectionAddress.toLowerCase());
+        
+        // Log all comparison results for debugging
+        if (directMatch || creatorMatch || containsMatch) {
+          console.log("✅ Match found! Strategy:", 
+                     directMatch ? "Direct match" : 
+                     creatorMatch ? "Creator match" : 
+                     "Contains match");
+        }
+        
+        return directMatch || creatorMatch || containsMatch;
       });
+      
+      console.log("Final verification result:", result);
+      return result;
     } catch (error) {
       console.error('Error verifying NFT ownership:', error);
       toast({
