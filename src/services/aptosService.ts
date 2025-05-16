@@ -3,6 +3,21 @@ import { Aptos, AptosConfig, Network } from '@aptos-labs/ts-sdk';
 import { useWallet } from '@aptos-labs/wallet-adapter-react';
 import { useToast } from '@/hooks/use-toast';
 
+// Define interfaces for the token data structure
+interface TokenDataId {
+  collection: string;
+  creator: string;
+  name: string;
+}
+
+interface CurrentTokenData {
+  token_data_id: TokenDataId;
+}
+
+interface TokenData {
+  current_token_data?: CurrentTokenData | null;
+}
+
 // Initialize Aptos client (using mainnet for production or testnet for testing)
 const aptosClient = new Aptos(new AptosConfig({
   network: Network.MAINNET
@@ -34,7 +49,7 @@ export const useAptosService = () => {
       // Check if the account has token data - use proper parameter object format
       const response = await aptosClient.getAccountOwnedTokens({
         accountAddress: formattedUserAddress,
-      });
+      }) as TokenData[];
       
       // If the user has no tokens
       if (!response || response.length === 0) {
@@ -44,27 +59,14 @@ export const useAptosService = () => {
       // Check if any token belongs to the specified collection
       return response.some(token => {
         // Extract the collection address from the token data structure
-        // The token_data_id is an object that contains the collection information
         const tokenDataId = token.current_token_data?.token_data_id;
         
         // Safely access the collection property if it exists in the structure
         let tokenCollectionId = '';
         
         // Only proceed if tokenDataId exists
-        if (tokenDataId !== null && tokenDataId !== undefined) {
-          // Ensure tokenDataId is an object with a 'collection' property before accessing it
-          // We need to re-check that tokenDataId is not null each time we access it
-          // to satisfy TypeScript's strict null checking
-          if (
-            typeof tokenDataId === 'object' && 
-            tokenDataId && // Ensure it's truthy before checking properties
-            'collection' in tokenDataId && 
-            tokenDataId.collection !== null && 
-            tokenDataId.collection !== undefined
-          ) {
-            // Safe to access collection property now
-            tokenCollectionId = String(tokenDataId.collection);
-          }
+        if (tokenDataId) {
+          tokenCollectionId = tokenDataId.collection;
         }
         
         // Compare with the specified collection address
