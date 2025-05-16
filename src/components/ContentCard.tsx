@@ -34,9 +34,6 @@ export const ContentCard = ({
   const { connected, account } = useWallet();
   const { verifyNftOwnership } = useAptosService();
   
-  // We're removing the useEffect that automatically checks NFT ownership
-  // to prevent immediate "Access Denied" errors
-  
   const checkNftAccess = async () => {
     try {
       setVerifying(true);
@@ -46,11 +43,16 @@ export const ContentCard = ({
           description: "Please connect your wallet to verify NFT ownership",
         });
         setVerifying(false);
-        return;
+        return false;
       }
+
+      // Clear previous state
+      setHasNftAccess(false);
 
       // Verify if the user owns an NFT from the collection
       console.log("Verifying NFT ownership for collection:", nftCollection);
+      console.log("Account address:", account.address);
+      
       const hasAccess = await verifyNftOwnership(nftCollection);
       console.log("Verification result:", hasAccess);
       
@@ -61,12 +63,14 @@ export const ContentCard = ({
           title: "Access Granted!",
           description: "You own an NFT from this collection. Content unlocked.",
         });
+        return true;
       } else {
         toast({
           title: "Access Denied",
           description: "You don't own an NFT from this collection.",
           variant: "destructive",
         });
+        return false;
       }
     } catch (error) {
       console.error('Error checking NFT access:', error);
@@ -75,12 +79,13 @@ export const ContentCard = ({
         description: "There was a problem verifying your NFT ownership.",
         variant: "destructive",
       });
+      return false;
     } finally {
       setVerifying(false);
     }
   };
   
-  const handleViewContent = () => {
+  const handleViewContent = async () => {
     if (!contentUrl) {
       toast({
         title: "Content Unavailable",
@@ -90,27 +95,32 @@ export const ContentCard = ({
       return;
     }
     
-    if (isLocked && !hasNftAccess) {
-      if (!connected) {
-        toast({
-          title: "Wallet Not Connected",
-          description: "Please connect your wallet to verify NFT ownership",
-        });
-      } else {
-        // Instead of showing an error, let's verify ownership first
-        checkNftAccess().then(() => {
-          // After verification, check if access was granted
-          if (hasNftAccess) {
-            navigate(contentUrl);
-          }
-        });
-        return;
-      }
+    // If content is not locked, just navigate to it
+    if (!isLocked) {
+      navigate(contentUrl);
       return;
     }
     
-    // If user has access or content is not locked
-    navigate(contentUrl);
+    // If content is locked but user already has verified access
+    if (hasNftAccess) {
+      navigate(contentUrl);
+      return;
+    }
+    
+    // If content is locked and user hasn't verified or doesn't have access
+    if (!connected) {
+      toast({
+        title: "Wallet Not Connected",
+        description: "Please connect your wallet to verify NFT ownership",
+      });
+      return;
+    }
+    
+    // Verify ownership and navigate if successful
+    const hasAccess = await checkNftAccess();
+    if (hasAccess && contentUrl) {
+      navigate(contentUrl);
+    }
   };
   
   const getContentIcon = () => {
@@ -164,7 +174,7 @@ export const ContentCard = ({
             </Button>
           ) : (
             <Button
-              onClick={hasNftAccess ? handleViewContent : checkNftAccess}
+              onClick={hasNftAccess ? handleViewContent : isLocked ? checkNftAccess : handleViewContent}
               className={hasNftAccess || !isLocked ? "aptos-btn w-full" : "w-full"}
               variant={hasNftAccess || !isLocked ? "default" : "outline"}
             >
