@@ -1,5 +1,5 @@
 
-import { jsonStorageClient } from '@/integrations/jsonStorage/client';
+import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useWallet } from '@aptos-labs/wallet-adapter-react';
 import type { ContentItem } from '@/integrations/jsonStorage/client';
@@ -14,40 +14,31 @@ export const useContentService = () => {
   const getUserContent = async (): Promise<ContentItem[]> => {
     try {
       // Get the authenticated user
-      const { data: { user } } = await jsonStorageClient.auth.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
         throw new Error('Not authenticated');
       }
       
-      const { data: profile } = await jsonStorageClient
+      const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select()
         .eq('id', user.id)
         .single();
       
-      if (!profile) {
+      if (profileError || !profile) {
         throw new Error('Profile not found');
       }
       
-      // The issue is here - the object returned from .eq() doesn't have a .then() method directly
-      // Let's use the async/await pattern consistently
-      const result = await new Promise<{ data: ContentItem[]; error: Error | null }>((resolve) => {
-        const queryResult = jsonStorageClient
-          .from('content')
-          .select()
-          .eq('creator_id', profile.id);
-          
-        // Use the limit() method which has a then() method
-        queryResult.limit(1000).then((result) => {
-          resolve(result);
-        });
-      });
-      
-      if (result.error) throw result.error;
+      const { data, error } = await supabase
+        .from('content')
+        .select()
+        .eq('creator_id', profile.id);
+        
+      if (error) throw error;
       
       // Sort the content manually after fetching
-      const sortedData = (result.data as ContentItem[])
+      const sortedData = (data as ContentItem[])
         .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
         
       return sortedData;
@@ -75,14 +66,14 @@ export const useContentService = () => {
       }
       
       // Get authenticated user
-      const { data: { user } } = await jsonStorageClient.auth.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
         throw new Error('Not authenticated');
       }
       
       // Ensure user has profile with wallet address
-      const { data: profile, error: profileError } = await jsonStorageClient
+      const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select()
         .eq('id', user.id)
@@ -94,7 +85,7 @@ export const useContentService = () => {
       
       // Update profile with wallet address if it's not set
       if (!profile.wallet_address) {
-        await jsonStorageClient
+        await supabase
           .from('profiles')
           .update({ wallet_address: account.address })
           .eq('id', user.id);
@@ -104,15 +95,22 @@ export const useContentService = () => {
       const fileExt = file.name.split('.').pop();
       const filePath = `${user.id}/${Date.now()}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
       
-      // Upload file to storage
-      const { error: uploadError } = await jsonStorageClient.storage
+      // Upload file to Supabase Storage
+      const { error: uploadError, data: uploadData } = await supabase.storage
         .from('content')
         .upload(filePath, file);
       
       if (uploadError) throw uploadError;
       
-      // Create content record
-      const { data: contentData, error: contentError } = await jsonStorageClient
+      // Get the public URL for the file
+      const { data: urlData } = supabase.storage
+        .from('content')
+        .getPublicUrl(filePath);
+        
+      const publicUrl = urlData.publicUrl;
+      
+      // Create content record in the database
+      const { data: contentData, error: contentError } = await supabase
         .from('content')
         .insert([
           {
@@ -127,6 +125,7 @@ export const useContentService = () => {
             updated_at: new Date().toISOString()
           }
         ])
+        .select()
         .single();
       
       if (contentError) throw contentError;
@@ -151,25 +150,25 @@ export const useContentService = () => {
   const deleteContent = async (contentId: string): Promise<boolean> => {
     try {
       // Get content details first to get the file path
-      const { data: content } = await jsonStorageClient
+      const { data: content, error: contentFetchError } = await supabase
         .from('content')
         .select()
         .eq('id', contentId)
         .single();
       
-      if (!content) {
+      if (contentFetchError || !content) {
         throw new Error('Content not found');
       }
       
-      // Delete file from storage
-      const { error: storageError } = await jsonStorageClient.storage
+      // Delete file from Supabase storage
+      const { error: storageError } = await supabase.storage
         .from('content')
         .remove([content.storage_path]);
         
       if (storageError) throw storageError;
       
-      // Delete content record
-      const { error: contentError } = await jsonStorageClient
+      // Delete content record from database
+      const { error: contentError } = await supabase
         .from('content')
         .delete()
         .eq('id', contentId);
@@ -197,9 +196,9 @@ export const useContentService = () => {
     try {
       if (!account?.address) return;
       
-      const { data: { user } } = await jsonStorageClient.auth.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
       
-      await jsonStorageClient.from('content_access_logs').insert([
+      await supabase.from('content_access_logs').insert([
         {
           content_id: contentId,
           user_id: user?.id,
@@ -208,8 +207,8 @@ export const useContentService = () => {
         }
       ]);
       
-      // Increment view count
-      await jsonStorageClient.rpc('increment_content_views', { content_id: contentId });
+      // Increment view count using a database function
+      await supabase.rpc('increment_content_views', { content_id: contentId });
     } catch (error) {
       console.error('Failed to log content access:', error);
     }
