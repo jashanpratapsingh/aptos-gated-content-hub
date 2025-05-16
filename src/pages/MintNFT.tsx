@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { toast } from 'sonner';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { supabase } from "@/integrations/supabase/client";
 
 const MintNFT = () => {
   const [walletAddress, setWalletAddress] = useState('');
@@ -27,26 +28,25 @@ const MintNFT = () => {
     setMintingSuccess(false);
     
     try {
-      // Use our Supabase Edge Function instead of directly calling Crossmint
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/mint-nft`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          // No API key needed in headers as it's stored securely in the Edge Function
-        },
-        body: JSON.stringify({
+      console.log("Calling Supabase Edge Function...");
+      
+      // Using Supabase client to call the edge function directly
+      const { data, error } = await supabase.functions.invoke('mint-nft', {
+        body: {
           recipient: `aptos:${walletAddress}`
-        }),
+        }
       });
       
-      const data = await response.json();
+      console.log("Minting response:", data, "Error:", error);
       
-      console.log("Minting response:", data);
+      if (error) {
+        throw new Error(error.message || 'Error calling minting service');
+      }
       
-      if (data.id) {
+      if (data && data.id) {
         setMintingSuccess(true);
         toast.success("NFT minted successfully!");
-      } else if (data.error) {
+      } else if (data && data.error) {
         toast.error(`Failed to mint NFT: ${data.error}`);
       } else {
         toast.error("Failed to mint NFT. Please check console for details.");

@@ -1,5 +1,5 @@
 
-project_id = "your-project-id"
+project_id = "xaywtxmcyigetfsfiyaq"
 
 [functions.mint-nft]
 verify_jwt = false
