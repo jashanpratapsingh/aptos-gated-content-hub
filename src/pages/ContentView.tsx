@@ -250,12 +250,12 @@ const ContentView = () => {
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="mb-8">
           <div className="flex items-center gap-2 text-aptosGray mb-2">
-            <span>Creator: {content.creator.wallet_address.substring(0, 6)}...{content.creator.wallet_address.substring(content.creator.wallet_address.length - 4)}</span>
+            <span>Creator: {content?.creator?.wallet_address.substring(0, 6)}...{content?.creator?.wallet_address.substring(content?.creator?.wallet_address.length - 4)}</span>
             <span>•</span>
             <span>Requires NFT</span>
           </div>
-          <h1 className="text-3xl font-bold mb-4">{content.title}</h1>
-          <p className="text-aptosGray">{content.description}</p>
+          <h1 className="text-3xl font-bold mb-4">{content?.title}</h1>
+          <p className="text-aptosGray">{content?.description}</p>
         </div>
         
         {renderContentPreview()}
