@@ -13,27 +13,10 @@ export const useContentService = () => {
   // Get user's created content
   const getUserContent = async (): Promise<ContentItem[]> => {
     try {
-      // Get the authenticated user
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        throw new Error('Not authenticated');
-      }
-      
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select()
-        .eq('id', user.id)
-        .single();
-      
-      if (profileError || !profile) {
-        throw new Error('Profile not found');
-      }
-      
+      // Get content without authentication requirement
       const { data, error } = await supabase
         .from('content')
-        .select()
-        .eq('creator_id', profile.id);
+        .select();
         
       if (error) throw error;
       
@@ -52,7 +35,7 @@ export const useContentService = () => {
     }
   };
   
-  // Upload content file to storage and create content record
+  // Upload content file to storage and create content record without authentication requirement
   const uploadContent = async (
     file: File,
     title: string,
@@ -61,39 +44,12 @@ export const useContentService = () => {
     contentType: 'pdf' | 'video'
   ): Promise<ContentItem | null> => {
     try {
-      if (!account?.address) {
-        throw new Error('Wallet not connected');
-      }
-      
-      // Get authenticated user
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        throw new Error('Not authenticated');
-      }
-      
-      // Ensure user has profile with wallet address
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select()
-        .eq('id', user.id)
-        .single();
-        
-      if (profileError || !profile) {
-        throw new Error('Profile not found');
-      }
-      
-      // Update profile with wallet address if it's not set
-      if (!profile.wallet_address) {
-        await supabase
-          .from('profiles')
-          .update({ wallet_address: account.address })
-          .eq('id', user.id);
-      }
+      // Generate a guest ID if not authenticated
+      const guestId = crypto.randomUUID();
       
       // Create a unique file path
       const fileExt = file.name.split('.').pop();
-      const filePath = `${user.id}/${Date.now()}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
+      const filePath = `guest/${guestId}/${Date.now()}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
       
       // Upload file to Supabase Storage
       const { error: uploadError, data: uploadData } = await supabase.storage
@@ -109,12 +65,12 @@ export const useContentService = () => {
         
       const publicUrl = urlData.publicUrl;
       
-      // Create content record in the database
+      // Create content record in the database without requiring authentication
       const { data: contentData, error: contentError } = await supabase
         .from('content')
         .insert([
           {
-            creator_id: user.id,
+            creator_id: guestId, // Use the generated guest ID
             title,
             description,
             content_type: contentType,
@@ -194,15 +150,14 @@ export const useContentService = () => {
   // Log content access
   const logContentAccess = async (contentId: string): Promise<void> => {
     try {
-      if (!account?.address) return;
-      
-      const { data: { user } } = await supabase.auth.getUser();
+      // Generate a guest ID for non-authenticated users
+      const guestId = crypto.randomUUID();
       
       await supabase.from('content_access_logs').insert([
         {
           content_id: contentId,
-          user_id: user?.id,
-          wallet_address: account.address,
+          user_id: null, // No user_id for guests
+          wallet_address: account?.address || null,
           accessed_at: new Date().toISOString()
         }
       ]);
