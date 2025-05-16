@@ -84,22 +84,6 @@ export const WalletSelector = () => {
     return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
   };
 
-  // Create a consistent, secure password that's shorter than 72 characters
-  const createConsistentPassword = async (address: string): Promise<string> => {
-    try {
-      // Generate hash using the browser-safe function
-      const hash = await createSHA256Hash(address);
-      
-      // Ensure the password is under 72 chars by using only part of the hash
-      // plus some identifying information
-      return `${hash.substring(0, 20)}WalletAuth${address.substring(0, 8)}`;
-    } catch (error) {
-      console.error("Error creating password:", error);
-      // Super simple fallback that will still be unique per address
-      return `Wallet${address.substring(0, 16)}Auth`;
-    }
-  };
-
   // Clean up Supabase auth state
   const cleanupAuthState = () => {
     localStorage.removeItem('supabase.auth.token');
@@ -138,21 +122,23 @@ export const WalletSelector = () => {
         .eq('wallet_address', address)
         .limit(1);
       
-      // Generate a valid email with a consistent username part that doesn't use the wallet address directly
-      // Using a fixed domain that we know is valid and a consistent prefix
+      // Create a hash of the wallet address to use as a unique identifier
       const hash = await createSHA256Hash(address);
-      const username = `wallet_${hash.substring(0, 12)}`;
-      const emailAddress = `${username}@example.com`;
       
-      // Generate consistent password that's under 72 characters
-      const password = await createConsistentPassword(address);
+      // Create a secure password derived from the wallet address
+      // This is used only for Supabase auth and never exposed to the user
+      const password = `Aptos_${hash.substring(0, 20)}`;
       
       if (!existingProfiles || existingProfiles.length === 0) {
         // No existing profile - create a new account
         console.log("No existing profile found, creating new account");
         
+        // Use the wallet address directly to create an account
+        // We'll use a UUID as username to avoid any validation issues
+        const uuid = crypto.randomUUID();
+        
         const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-          email: emailAddress,
+          email: `${uuid}@noreply.wallet.app`,
           password: password,
         });
         
@@ -175,67 +161,49 @@ export const WalletSelector = () => {
         }
         
         toast({
-          title: "Account Created",
-          description: "New wallet profile has been created and you're signed in.",
+          title: "Wallet Connected",
+          description: "Your wallet is now connected and authenticated.",
         });
       } else {
         // Profile exists - sign in to the existing account
         console.log("Existing profile found, signing in");
         
+        // We need to find the email associated with this wallet address
+        // First, get the user ID from the profile
+        const userId = existingProfiles[0].id;
+        
+        // Then, get the user's email from auth.users (via a function)
+        // Since we can't directly query auth.users, we'll use the wallet address
+        // and try different ways to authenticate
+        
+        // Try to use a consistent format for the email based on user ID
+        const email = `${userId}@noreply.wallet.app`;
+        
         const { error: signInError } = await supabase.auth.signInWithPassword({
-          email: emailAddress,
+          email: email,
           password: password,
         });
         
         if (signInError) {
           console.log("Sign-in failed, attempting alternative authentication");
           
-          // If sign in fails, try to sign up anyway (this could happen if the account exists
-          // but the password has changed or was created with a different algorithm)
-          const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-            email: emailAddress,
+          // If sign in fails, try with a UUID-based email
+          // This is a fallback mechanism
+          const uuid = crypto.randomUUID();
+          const { error: secondSignInError } = await supabase.auth.signInWithPassword({
+            email: `${uuid}@noreply.wallet.app`,
             password: password,
           });
           
-          if (signUpError) {
-            // If sign up also fails, we need to reset the password
-            console.log("Sign-up failed, attempting password reset");
-            
-            const { error: resetError } = await supabase.auth.resetPasswordForEmail(
-              emailAddress,
-              { redirectTo: window.location.origin }
-            );
-            
-            if (resetError) {
-              console.error("Error resetting password:", resetError);
-              throw new Error("Couldn't authenticate with wallet. Please try again later.");
-            }
-            
-            // Try signing in one more time
-            const { error: finalSignInError } = await supabase.auth.signInWithPassword({
-              email: emailAddress,
-              password: password,
-            });
-            
-            if (finalSignInError) {
-              console.error("Final sign-in attempt failed:", finalSignInError);
-              throw new Error("Authentication failed. Please disconnect and try again.");
-            }
-          }
-          
-          // Make sure the wallet address is updated in the profile
-          const { data: userData } = await supabase.auth.getUser();
-          if (userData && userData.user) {
-            await supabase
-              .from('profiles')
-              .update({ wallet_address: address })
-              .eq('id', userData.user.id);
+          if (secondSignInError) {
+            console.error("Alternative sign-in failed:", secondSignInError);
+            throw new Error("Authentication failed. Please disconnect and try again.");
           }
         }
         
         toast({
-          title: "Authentication Successful",
-          description: "Your wallet is now connected and you're signed in.",
+          title: "Wallet Connected",
+          description: "Your wallet is now connected and authenticated.",
         });
       }
     } catch (error: any) {
