@@ -52,8 +52,16 @@ export const useAptosService = () => {
         
         // Add additional null check for tokenDataId
         if (tokenDataId !== null && tokenDataId !== undefined) {
-          if (typeof tokenDataId === 'object' && tokenDataId !== null && 'collection' in tokenDataId) {
-            tokenCollectionId = tokenDataId.collection as string;
+          // Ensure tokenDataId is not null and is an object type before checking for 'collection' property
+          if (
+            typeof tokenDataId === 'object' && 
+            tokenDataId !== null && 
+            'collection' in tokenDataId && 
+            tokenDataId.collection !== null && 
+            tokenDataId.collection !== undefined
+          ) {
+            // Safe to access collection property now
+            tokenCollectionId = String(tokenDataId.collection);
           }
         }
         
