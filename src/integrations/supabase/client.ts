@@ -14,7 +14,8 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     storage: localStorage,
     persistSession: true,
     autoRefreshToken: true,
-    // Use implicit flow type for phone auth-based flow
-    flowType: 'implicit'
+    // Support passwordless magic links
+    detectSessionInUrl: true,
+    flowType: 'pkce'
   }
 });

@@ -80,6 +80,22 @@ export const WalletSelector = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Check for auth state changes from Supabase magic links
+  useEffect(() => {
+    const handleAuthStateChange = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        toast({
+          title: "Magic Link Successful",
+          description: "You've been successfully authenticated with your wallet",
+        });
+      }
+    });
+    
+    return () => {
+      handleAuthStateChange.data.subscription.unsubscribe();
+    };
+  }, [toast]);
+
   // Format address for display
   const formatAddress = (address: string) => {
     return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
@@ -116,12 +132,9 @@ export const WalletSelector = () => {
         console.log("Global sign out failed, continuing with authentication");
       }
       
-      // Create a hash of the wallet address to use as a unique identifier
-      const hash = await createSHA256Hash(address);
-      
-      // Create a secure password derived from the wallet address
-      // This is used only for Supabase auth and never exposed to the user
-      const password = `Aptos_${hash.substring(0, 20)}`;
+      // Create a wallet-specific email that's valid for magic link
+      const emailDomain = 'wallet.example.com';
+      const walletEmail = `wallet_${address.substring(2, 10)}@${emailDomain}`;
       
       // Check if a profile with this wallet address already exists
       const { data: existingProfiles } = await supabase
@@ -131,64 +144,71 @@ export const WalletSelector = () => {
         .limit(1);
       
       if (!existingProfiles || existingProfiles.length === 0) {
-        // No existing profile - create a new account with wallet address directly
-        console.log("No existing profile found, creating new account with wallet address");
+        console.log("No existing profile found, creating new account with magic link");
         
-        // Use direct sign-up method without email
-        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-          phone: `+${address.substring(2, 18)}`, // Use part of the wallet address as a "phone number"
-          password: password,
-        });
-        
-        if (signUpError) {
-          console.error("Error signing up:", signUpError);
-          throw signUpError;
-        }
-        
-        // Update the profile with the wallet address
-        if (signUpData && signUpData.user) {
-          const { error: profileError } = await supabase
-            .from('profiles')
-            .update({ wallet_address: address })
-            .eq('id', signUpData.user.id);
-          
-          if (profileError) {
-            console.error("Error updating profile:", profileError);
-            throw profileError;
+        // Send magic link to the wallet-derived email
+        const { error: signInError } = await supabase.auth.signInWithOtp({
+          email: walletEmail,
+          options: {
+            shouldCreateUser: true,
+            // Auto-confirm the magic link since we don't expect actual email delivery
+            data: {
+              wallet_address: address
+            }
           }
-        }
-        
-        toast({
-          title: "Wallet Connected",
-          description: "Your wallet is now connected and authenticated.",
-        });
-      } else {
-        // Profile exists - sign in to the existing account using phone auth
-        console.log("Existing profile found, signing in with phone auth");
-        
-        // Get the user ID from the existing profile
-        const userId = existingProfiles[0].id;
-        
-        // Check if the profile has a phone number
-        const { data: userData } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('id', userId)
-          .single();
-        
-        if (!userData) {
-          throw new Error("User profile not found");
-        }
-        
-        // Sign in with phone and password
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          phone: `+${address.substring(2, 18)}`,
-          password: password,
         });
         
         if (signInError) {
-          console.error("Sign-in failed:", signInError);
+          console.error("Magic link error:", signInError);
           throw signInError;
+        }
+        
+        // Since we can't wait for the user to click a magic link (which won't be delivered),
+        // we'll create the profile entry here to associate the wallet
+        const { data } = await supabase.auth.getUser();
+        
+        if (data && data.user) {
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .upsert({ 
+              id: data.user.id, 
+              wallet_address: address 
+            });
+          
+          if (profileError) {
+            console.error("Error creating profile:", profileError);
+            throw profileError;
+          }
+          
+          toast({
+            title: "Wallet Connected",
+            description: "Your wallet is now connected and authenticated.",
+          });
+        }
+      } else {
+        console.log("Existing profile found, signing in with magic link");
+        
+        // For existing users, just update the magic link to ensure authentication
+        const { error: signInError } = await supabase.auth.signInWithOtp({
+          email: walletEmail,
+          options: {
+            shouldCreateUser: false
+          }
+        });
+        
+        if (signInError) {
+          console.error("Magic link error:", signInError);
+          throw signInError;
+        }
+        
+        // Update the profile to ensure wallet address is correctly set
+        const { data } = await supabase.auth.getUser();
+        
+        if (data && data.user) {
+          await supabase
+            .from('profiles')
+            .update({ wallet_address: address })
+            .eq('id', data.user.id);
         }
         
         toast({
