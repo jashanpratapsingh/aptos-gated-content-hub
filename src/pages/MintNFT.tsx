@@ -21,7 +21,7 @@ fetch("https://www.crossmint.com/api/2022-06-09/collections/61c50a08-26da-4c76-a
   method: "POST",
   headers: {
     "Content-Type": "application/json",
-    "X-API-KEY": "sk_staging.e1S7i.VDEvU30ceObJyMFUVZQ6JzVUQG8" // This is a public staging key
+    "X-API-KEY": "sk_live.VrM20.qCLKQZ9krqZphbWU1NuO9ukKam8" // Actual API key
   },
   body: JSON.stringify({
     recipient: \`aptos:\${walletAddress}\`,
