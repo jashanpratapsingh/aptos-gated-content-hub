@@ -1,73 +1,57 @@
-# Welcome to your Lovable project
 
-## Project info
+# AptosGate - NFT-Gated Content Platform
 
-**URL**: https://lovable.dev/projects/45b75686-3b59-415c-a536-a94341c3f78c
+AptosGate is a modern web application that provides access to exclusive content based on NFT ownership verification on the Aptos blockchain. The platform allows creators to gate their premium content (PDFs, videos, etc.) behind NFT ownership requirements.
 
-## How can I edit this code?
+## Features
 
-There are several ways of editing your application.
+- **NFT Verification**: Verify ownership of specific NFTs on the Aptos blockchain to unlock content
+- **Content Management**: Upload, manage, and organize premium content including PDFs and videos
+- **Responsive Design**: Fully responsive interface that works across all devices
+- **Wallet Integration**: Seamless integration with multiple Aptos blockchain wallets
+- **User Dashboard**: Personalized dashboard for users to view their accessible content
+- **Content Exploration**: Browse available content collections with preview capabilities
 
-**Use Lovable**
+## Technology Stack
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/45b75686-3b59-415c-a536-a94341c3f78c) and start prompting.
+- **Frontend**: React, TypeScript, Tailwind CSS, shadcn/ui
+- **Blockchain**: Aptos blockchain integration with wallet adapters
+- **Content Rendering**: PDF viewer, video playback capabilities
+- **State Management**: React Query for efficient data fetching and caching
+- **Styling**: Custom Aptos-themed design system with Tailwind CSS
 
-Changes made via Lovable will be committed automatically to this repo.
+## Getting Started
 
-**Use your preferred IDE**
+To run the project locally:
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+```bash
+# Install dependencies
+npm install
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Start the development server
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+## Project Structure
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+- `/src/components`: UI components used throughout the application
+- `/src/pages`: Main page components for each route
+- `/src/services`: Service layer for API and blockchain interactions
+- `/src/hooks`: Custom React hooks for shared functionality
+- `/src/providers`: Context providers for state management
 
-**Use GitHub Codespaces**
+## Deployment
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+The application can be deployed to any static hosting service. For production builds:
 
-## What technologies are used for this project?
+```bash
+# Build for production
+npm run build
 
-This project is built with:
+# Preview the production build locally
+npm run preview
+```
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## License
 
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/45b75686-3b59-415c-a536-a94341c3f78c) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+All rights reserved.
