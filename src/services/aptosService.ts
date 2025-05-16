@@ -50,12 +50,14 @@ export const useAptosService = () => {
         // Safely access the collection property if it exists in the structure
         let tokenCollectionId = '';
         
-        // Add additional null check for tokenDataId
+        // Only proceed if tokenDataId exists
         if (tokenDataId !== null && tokenDataId !== undefined) {
-          // Ensure tokenDataId is not null and is an object type before checking for 'collection' property
+          // Ensure tokenDataId is an object with a 'collection' property before accessing it
+          // We need to re-check that tokenDataId is not null each time we access it
+          // to satisfy TypeScript's strict null checking
           if (
             typeof tokenDataId === 'object' && 
-            tokenDataId !== null && 
+            tokenDataId && // Ensure it's truthy before checking properties
             'collection' in tokenDataId && 
             tokenDataId.collection !== null && 
             tokenDataId.collection !== undefined
