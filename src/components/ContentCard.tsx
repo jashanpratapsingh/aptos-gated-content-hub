@@ -56,7 +56,10 @@ export const ContentCard = ({
       }
 
       // Verify if the user owns an NFT from the collection
+      console.log("Verifying NFT ownership for collection:", nftCollection);
       const hasAccess = await verifyNftOwnership(nftCollection);
+      console.log("Verification result:", hasAccess);
+      
       setHasNftAccess(hasAccess);
       
       if (hasAccess) {
@@ -64,9 +67,20 @@ export const ContentCard = ({
           title: "Access Granted!",
           description: "You own an NFT from this collection. Content unlocked.",
         });
+      } else {
+        toast({
+          title: "Access Denied",
+          description: "You don't own an NFT from this collection.",
+          variant: "destructive",
+        });
       }
     } catch (error) {
       console.error('Error checking NFT access:', error);
+      toast({
+        title: "Verification Error",
+        description: "There was a problem verifying your NFT ownership.",
+        variant: "destructive",
+      });
     } finally {
       setVerifying(false);
     }
@@ -153,7 +167,7 @@ export const ContentCard = ({
             </Button>
           ) : (
             <Button
-              onClick={isLocked && !hasNftAccess ? checkNftAccess : handleViewContent}
+              onClick={hasNftAccess ? handleViewContent : checkNftAccess}
               className={hasNftAccess || !isLocked ? "aptos-btn w-full" : "w-full"}
               variant={hasNftAccess || !isLocked ? "default" : "outline"}
             >

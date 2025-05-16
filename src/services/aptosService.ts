@@ -46,6 +46,7 @@ export const useAptosService = () => {
   const verifyNftOwnership = async (collectionAddress: string): Promise<boolean> => {
     try {
       if (!account?.address) {
+        console.log("No wallet address available");
         return false;
       }
 
@@ -57,13 +58,19 @@ export const useAptosService = () => {
         ? account.address 
         : `0x${account.address}`;
 
+      console.log("Checking NFTs for address:", formattedUserAddress);
+      console.log("Looking for collection:", formattedCollectionAddress);
+
       // Get the account's tokens with the correct type
       const response = await aptosClient.getAccountOwnedTokens({
         accountAddress: formattedUserAddress,
       }) as unknown as TokenOwnershipResponse[];
       
+      console.log("NFT response received:", response ? response.length : 0, "tokens found");
+      
       // If the user has no tokens
       if (!response || response.length === 0) {
+        console.log("No tokens found for this account");
         return false;
       }
 
@@ -87,6 +94,10 @@ export const useAptosService = () => {
             tokenCollectionId = parts[0];
           }
         }
+        
+        // Log the collection ID we found for debugging
+        console.log("Found token collection:", tokenCollectionId);
+        console.log("Comparing with:", formattedCollectionAddress);
         
         // Compare with the specified collection address if we found a collection ID
         return tokenCollectionId && 
