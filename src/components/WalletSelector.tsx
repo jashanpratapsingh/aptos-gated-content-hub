@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -139,8 +138,11 @@ export const WalletSelector = () => {
         .eq('wallet_address', address)
         .limit(1);
       
-      // Generate deterministic email based on wallet address
-      const emailAddress = `${address.toLowerCase()}@aptos-wallet.user`;
+      // Generate a valid email with a consistent username part that doesn't use the wallet address directly
+      // Using a fixed domain that we know is valid and a consistent prefix
+      const hash = await createSHA256Hash(address);
+      const username = `wallet_${hash.substring(0, 12)}`;
+      const emailAddress = `${username}@example.com`;
       
       // Generate consistent password that's under 72 characters
       const password = await createConsistentPassword(address);
