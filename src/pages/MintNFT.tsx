@@ -21,7 +21,7 @@ fetch("https://www.crossmint.com/api/2022-06-09/collections/61c50a08-26da-4c76-a
   method: "POST",
   headers: {
     "Content-Type": "application/json",
-    "X-API-KEY": "sk_live.VrM20.qCLKQZ9krqZphbWU1NuO9ukKam8" // Actual API key
+    "X-API-KEY": "sk_production_6BDE9YJ8KJnmdXGJcx6WHkdvDyabtZPZfqp83Zgi5ueaFUwpahna3NU2c7DWD9WAwwTmVfMDcsCk9vySWGbir31DHERPwuFJbiiQmBQNBxb1q8Ju17JumkhBQc9ZjhLmDkshy98NF3rRvaQYKyn1qNS8dTFx9Fs439eSbJGd1x7ky8PLLn8539WmQxCRyrMZ8xNPftcUk4DLoAdMBknDwpxH"
   },
   body: JSON.stringify({
     recipient: \`aptos:\${walletAddress}\`,
