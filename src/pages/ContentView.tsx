@@ -129,7 +129,8 @@ const ContentView = () => {
     }
   };
   
-  const verifyNftOwnership = async () => {
+  // Renamed from verifyNftOwnership to handleVerifyOwnership to avoid conflict
+  const handleVerifyOwnership = async () => {
     if (!content) return;
     
     if (!connected) {
@@ -166,7 +167,7 @@ const ContentView = () => {
             {content.nft_collection_address}
           </p>
           <Button 
-            onClick={verifyNftOwnership}
+            onClick={handleVerifyOwnership}
             disabled={verifying}
             className="aptos-btn"
           >

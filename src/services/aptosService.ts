@@ -1,13 +1,12 @@
 
-import { AptosClient, Network, Types } from '@aptos-labs/ts-sdk';
+import { Aptos, AptosConfig, Network } from '@aptos-labs/ts-sdk';
 import { useWallet } from '@aptos-labs/wallet-adapter-react';
 import { useToast } from '@/hooks/use-toast';
 
 // Initialize Aptos client (using mainnet for production or testnet for testing)
-const aptosClient = new AptosClient({ 
-  NODE_URL: "https://fullnode.mainnet.aptoslabs.com/v1",
-  NETWORK: Network.MAINNET
-});
+const aptosClient = new Aptos(new AptosConfig({
+  network: Network.MAINNET
+}));
 
 export const useAptosService = () => {
   const { toast } = useToast();
@@ -33,12 +32,12 @@ export const useAptosService = () => {
         : `0x${account.address}`;
 
       // Query the blockchain to get NFTs owned by the wallet
-      const userNftsResponse = await aptosClient.getAccountTokensCount(
-        formattedUserAddress
-      );
+      const tokensCount = await aptosClient.getAccountOwnedTokensCount({
+        accountAddress: formattedUserAddress,
+      });
 
       // If the user has no tokens
-      if (!userNftsResponse || Number(userNftsResponse) === 0) {
+      if (!tokensCount || Number(tokensCount) === 0) {
         return false;
       }
 
