@@ -12,6 +12,7 @@ const MintNFT = () => {
   const [walletAddress, setWalletAddress] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showCorsError, setShowCorsError] = useState(false);
+  const [mintingSuccess, setMintingSuccess] = useState(false);
   
   const collectionId = "0xbd74942508d56631e1e7869ccef33866413b6253c65397c79d5e07fe26d1fd50";
   
@@ -23,38 +24,37 @@ const MintNFT = () => {
     
     setIsLoading(true);
     setShowCorsError(false);
+    setMintingSuccess(false);
     
     try {
-      const options = {
+      // Use our Supabase Edge Function instead of directly calling Crossmint
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/mint-nft`, {
         method: "POST",
         headers: {
-          "X-API-KEY": "sk_production_6BDE9YJ8KJnmdXGJcx6WHkdvDyabtZPZfqp83Zgi5ueaFUwpahna3NU2c7DWD9WAwwTmVfMDcsCk9vySWGbir31DHERPwuFJbiiQmBQNBxb1q8Ju17JumkhBQc9ZjhLmDkshy98NF3rRvaQYKyn1qNS8dTFx9Fs439eSbJGd1x7ky8PLLn8539WmQxCRyrMZ8xNPftcUk4DLoAdMBknDwpxH",
           "Content-Type": "application/json",
+          // No API key needed in headers as it's stored securely in the Edge Function
         },
         body: JSON.stringify({
-          recipient: `aptos:${walletAddress}`,
-          metadata: {
-            name: "AptosGate NFT #1",
-            image: "ipfs://QmdZ2pxfRqah6SDFMuAiRXCBktvGeggTir6KbjDFmANoiQ",
-            description: "First NFT in the AptosGate collection"
-          }
+          recipient: `aptos:${walletAddress}`
         }),
-      };
-
-      const response = await fetch("https://www.crossmint.com/api/2022-06-09/collections/61c50a08-26da-4c76-ac3d-e9b4c865fd16/nfts", options);
+      });
+      
       const data = await response.json();
       
       console.log("Minting response:", data);
       
       if (data.id) {
+        setMintingSuccess(true);
         toast.success("NFT minted successfully!");
+      } else if (data.error) {
+        toast.error(`Failed to mint NFT: ${data.error}`);
       } else {
         toast.error("Failed to mint NFT. Please check console for details.");
       }
     } catch (error) {
       console.error("Error minting NFT:", error);
       setShowCorsError(true);
-      toast.error("Error minting NFT. CORS policy error detected.");
+      toast.error("Error minting NFT. Please try again later.");
     } finally {
       setIsLoading(false);
     }
@@ -69,15 +69,25 @@ const MintNFT = () => {
           {showCorsError && (
             <Alert variant="destructive" className="mb-6">
               <AlertCircle className="h-4 w-4" />
-              <AlertTitle>CORS Error Detected</AlertTitle>
+              <AlertTitle>Connection Error</AlertTitle>
               <AlertDescription>
-                <p>The request to the Crossmint API was blocked due to CORS policy restrictions.</p>
-                <p className="mt-2">To mint NFTs for testing:</p>
-                <ol className="list-decimal ml-5 mt-2">
-                  <li>Use the API details below with Postman or cURL</li>
-                  <li>Deploy a backend proxy service that can forward the request</li>
-                  <li>Contact Crossmint to whitelist your domain</li>
-                </ol>
+                <p>Unable to connect to the minting service.</p>
+                <p className="mt-2">This could be due to:</p>
+                <ul className="list-disc ml-5 mt-2">
+                  <li>Network connectivity issues</li>
+                  <li>The backend service may be down</li>
+                  <li>Missing Supabase configuration</li>
+                </ul>
+              </AlertDescription>
+            </Alert>
+          )}
+          
+          {mintingSuccess && (
+            <Alert className="mb-6 bg-green-100/20 border-green-500/40">
+              <AlertTitle className="text-green-500">Success!</AlertTitle>
+              <AlertDescription>
+                <p>Your NFT was successfully minted to address: {walletAddress}</p>
+                <p className="mt-2">You can now use this NFT to access gated content on the platform.</p>
               </AlertDescription>
             </Alert>
           )}
@@ -110,26 +120,6 @@ const MintNFT = () => {
                   This NFT will be minted to your wallet and can be used to access gated content on this platform.
                 </p>
               </div>
-              
-              {showCorsError && (
-                <div className="p-4 bg-black/20 rounded-lg border border-red-500/40">
-                  <p className="text-sm font-medium mb-2">API Request Details (for manual testing):</p>
-                  <pre className="overflow-x-auto p-2 bg-black/30 rounded text-xs font-mono whitespace-pre-wrap">
-{`POST https://www.crossmint.com/api/2022-06-09/collections/61c50a08-26da-4c76-ac3d-e9b4c865fd16/nfts
-X-API-KEY: sk_production_6BDE9YJ8KJnmdXGJcx6WHkdvDyabtZPZfqp83Zgi5ueaFUwpahna3NU2c7DWD9WAwwTmVfMDcsCk9vySWGbir31DHERPwuFJbiiQmBQNBxb1q8Ju17JumkhBQc9ZjhLmDkshy98NF3rRvaQYKyn1qNS8dTFx9Fs439eSbJGd1x7ky8PLLn8539WmQxCRyrMZ8xNPftcUk4DLoAdMBknDwpxH
-Content-Type: application/json
-
-{
-  "recipient": "aptos:${walletAddress || '0xYOUR_WALLET_ADDRESS'}",
-  "metadata": {
-    "name": "AptosGate NFT #1",
-    "image": "ipfs://QmdZ2pxfRqah6SDFMuAiRXCBktvGeggTir6KbjDFmANoiQ",
-    "description": "First NFT in the AptosGate collection"
-  }
-}`}
-                  </pre>
-                </div>
-              )}
             </CardContent>
             <CardFooter>
               <Button 
