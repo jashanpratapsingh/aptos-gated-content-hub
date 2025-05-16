@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, Download, Loader2 } from 'lucide-react';
@@ -20,15 +20,32 @@ const PdfViewer = ({ pdfUrl, onDownload }: PdfViewerProps) => {
   const [pageNumber, setPageNumber] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const [retries, setRetries] = useState(0);
+  const maxRetries = 3;
+
+  // Effect to re-attempt loading if URL is valid but loading fails
+  useEffect(() => {
+    if (error && retries < maxRetries && pdfUrl) {
+      const timer = setTimeout(() => {
+        console.log(`Retrying PDF load (${retries + 1}/${maxRetries})...`);
+        setError(null);
+        setLoading(true);
+        setRetries(r => r + 1);
+      }, 1500);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [error, retries, pdfUrl]);
 
   const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
     setNumPages(numPages);
     setLoading(false);
+    setError(null);
     console.log(`PDF loaded successfully with ${numPages} pages`);
   };
 
   const onDocumentLoadError = (error: Error) => {
-    console.error('Error loading PDF:', error);
+    console.error('Error loading PDF:', error, 'for URL:', pdfUrl);
     setError(error);
     setLoading(false);
   };
@@ -53,7 +70,10 @@ const PdfViewer = ({ pdfUrl, onDownload }: PdfViewerProps) => {
       
       {error && (
         <div className="bg-red-500/10 text-red-500 p-4 rounded-md text-center">
-          <p>Failed to load PDF. Please try again later.</p>
+          <p>Failed to load PDF. {retries < maxRetries ? "Retrying..." : "Please try again later."}</p>
+          {retries >= maxRetries && (
+            <p className="mt-2 text-sm">Error: {error.message}</p>
+          )}
         </div>
       )}
       

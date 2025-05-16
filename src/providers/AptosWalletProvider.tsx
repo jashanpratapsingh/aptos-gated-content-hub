@@ -22,6 +22,19 @@ const AuthContext = createContext<AuthContextType>({
 
 export const useAuth = () => useContext(AuthContext);
 
+// Helper function to clean up auth state artifacts
+const cleanupAuthState = () => {
+  // Remove any stale auth tokens
+  localStorage.removeItem('json_session');
+  
+  // Remove any keys related to auth state
+  Object.keys(localStorage).forEach((key) => {
+    if (key.startsWith('json_auth.') || key.includes('json-session')) {
+      localStorage.removeItem(key);
+    }
+  });
+};
+
 export const AptosWalletProvider: React.FC<AptosWalletProviderProps> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -33,23 +46,39 @@ export const AptosWalletProvider: React.FC<AptosWalletProviderProps> = ({ childr
   useEffect(() => {
     const checkAuthState = async () => {
       try {
-        // Set up auth state listener FIRST
+        // Set up auth state listener FIRST with improved error handling
         const { data: { subscription } } = jsonStorageClient.auth.onAuthStateChange((event, session) => {
+          console.log("Auth state change event:", event);
           setIsAuthenticated(!!session);
-          console.log("Auth state changed:", event, !!session);
+          
+          // If we get a sign_in event, make sure we're storing auth state properly
+          if (event === 'SIGNED_IN' && session) {
+            console.log("User authenticated successfully");
+            
+            // Use a setTimeout to avoid potential auth state deadlocks
+            setTimeout(() => {
+              // Any additional auth state setup can go here safely
+            }, 0);
+          }
         });
         
-        // THEN check for existing session
+        // THEN check for existing session with cleaner error handling
         const { data: { session } } = await jsonStorageClient.auth.getSession();
+        
+        console.log("Initial auth check - session exists:", !!session);
         setIsAuthenticated(!!session);
         setIsLoading(false);
         
         return () => {
+          // Cleanup on unmount
           subscription.unsubscribe();
         };
       } catch (error) {
         console.error("Error checking auth state:", error);
         setIsLoading(false);
+        
+        // If there's an error in auth state, clean up to prevent stuck states
+        cleanupAuthState();
       }
     };
     

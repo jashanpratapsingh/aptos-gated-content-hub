@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -38,6 +39,18 @@ async function createSHA256Hash(input: string): Promise<string> {
   }
 }
 
+// Helper function to clean up auth state
+const cleanupAuthState = () => {
+  localStorage.removeItem('json_session');
+  
+  // Remove any keys related to auth state
+  Object.keys(localStorage).forEach((key) => {
+    if (key.startsWith('json_auth.') || key.includes('json-session')) {
+      localStorage.removeItem(key);
+    }
+  });
+};
+
 export const WalletSelector = () => {
   const [showWallets, setShowWallets] = useState(false);
   const [authenticating, setAuthenticating] = useState(false);
@@ -59,9 +72,10 @@ export const WalletSelector = () => {
     wallet.readyState === 'NotDetected'
   );
 
-  // Handle wallet connection changes
+  // Handle wallet connection changes with improved persistence
   useEffect(() => {
     if (connected && account?.address) {
+      console.log("Account connected:", account.address.substring(0, 10) + "...");
       handleAuthentication(account.address);
     }
   }, [connected, account?.address]);
@@ -100,12 +114,7 @@ export const WalletSelector = () => {
     return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
   };
 
-  // Clean up auth state
-  const cleanupAuthState = () => {
-    localStorage.removeItem('json_session');
-  };
-
-  // Handle authentication
+  // Handle authentication with improved error handling and state cleanup
   const handleAuthentication = async (address: string) => {
     try {
       setAuthenticating(true);
@@ -120,6 +129,8 @@ export const WalletSelector = () => {
         // Continue even if this fails
         console.log("Sign out failed, continuing with authentication");
       }
+      
+      console.log("Authenticating wallet address:", address.substring(0, 10) + "...");
       
       // Check if a profile with this wallet address already exists
       const { data: existingProfiles } = await jsonStorageClient
