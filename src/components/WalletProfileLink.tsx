@@ -1,9 +1,9 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useWallet } from '@aptos-labs/wallet-adapter-react';
-import { supabase } from '@/integrations/supabase/client';
+import { jsonStorageClient } from '@/integrations/jsonStorage/client';
 
 export const WalletProfileLink = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -22,14 +22,14 @@ export const WalletProfileLink = () => {
       }
       
       // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await jsonStorageClient.auth.getUser();
       
       if (!user) {
         throw new Error('You must be signed in to update your profile');
       }
       
       // Update profile with wallet address
-      const { error } = await supabase
+      const { error } = await jsonStorageClient
         .from('profiles')
         .update({ wallet_address: account.address })
         .eq('id', user.id);

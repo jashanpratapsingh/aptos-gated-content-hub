@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useWallet, WalletName } from '@aptos-labs/wallet-adapter-react';
-import { supabase } from '@/integrations/supabase/client';
+import { jsonStorageClient } from '@/integrations/jsonStorage/client';
 
 /**
  * Creates a SHA-256 hash of the input string using WebCrypto API if available
@@ -80,19 +79,19 @@ export const WalletSelector = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Check for auth state changes from Supabase magic links
+  // Check for auth state changes
   useEffect(() => {
-    const handleAuthStateChange = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = jsonStorageClient.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session) {
         toast({
-          title: "Magic Link Successful",
+          title: "Authentication Successful",
           description: "You've been successfully authenticated with your wallet",
         });
       }
     });
     
     return () => {
-      handleAuthStateChange.data.subscription.unsubscribe();
+      subscription.unsubscribe();
     };
   }, [toast]);
 
@@ -101,22 +100,12 @@ export const WalletSelector = () => {
     return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
   };
 
-  // Clean up Supabase auth state
+  // Clean up auth state
   const cleanupAuthState = () => {
-    localStorage.removeItem('supabase.auth.token');
-    Object.keys(localStorage).forEach((key) => {
-      if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
-        localStorage.removeItem(key);
-      }
-    });
-    Object.keys(sessionStorage || {}).forEach((key) => {
-      if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
-        sessionStorage.removeItem(key);
-      }
-    });
+    localStorage.removeItem('json_session');
   };
 
-  // Handle authentication with Supabase
+  // Handle authentication
   const handleAuthentication = async (address: string) => {
     try {
       setAuthenticating(true);
@@ -126,89 +115,43 @@ export const WalletSelector = () => {
       
       // Try to sign out globally first
       try {
-        await supabase.auth.signOut({ scope: 'global' });
+        await jsonStorageClient.auth.signOut();
       } catch (err) {
         // Continue even if this fails
-        console.log("Global sign out failed, continuing with authentication");
+        console.log("Sign out failed, continuing with authentication");
       }
       
-      // Create a wallet-specific email that's valid for magic link
-      const emailDomain = 'wallet.example.com';
-      const walletEmail = `wallet_${address.substring(2, 10)}@${emailDomain}`;
-      
       // Check if a profile with this wallet address already exists
-      const { data: existingProfiles } = await supabase
+      const { data: existingProfiles } = await jsonStorageClient
         .from('profiles')
-        .select('id, wallet_address')
+        .select()
         .eq('wallet_address', address)
         .limit(1);
       
       if (!existingProfiles || existingProfiles.length === 0) {
-        console.log("No existing profile found, creating new account with magic link");
+        console.log("No existing profile found, creating new account");
         
-        // Send magic link to the wallet-derived email
-        const { error: signInError } = await supabase.auth.signInWithOtp({
-          email: walletEmail,
-          options: {
-            shouldCreateUser: true,
-            // Auto-confirm the magic link since we don't expect actual email delivery
-            data: {
-              wallet_address: address
-            }
-          }
+        // Authenticate with wallet address
+        const { error: authError } = await jsonStorageClient.auth.authenticateWithWallet(address);
+        
+        if (authError) {
+          console.error("Authentication error:", authError);
+          throw authError;
+        }
+        
+        toast({
+          title: "Wallet Connected",
+          description: "Your wallet is now connected and authenticated.",
         });
-        
-        if (signInError) {
-          console.error("Magic link error:", signInError);
-          throw signInError;
-        }
-        
-        // Since we can't wait for the user to click a magic link (which won't be delivered),
-        // we'll create the profile entry here to associate the wallet
-        const { data } = await supabase.auth.getUser();
-        
-        if (data && data.user) {
-          const { error: profileError } = await supabase
-            .from('profiles')
-            .upsert({ 
-              id: data.user.id, 
-              wallet_address: address 
-            });
-          
-          if (profileError) {
-            console.error("Error creating profile:", profileError);
-            throw profileError;
-          }
-          
-          toast({
-            title: "Wallet Connected",
-            description: "Your wallet is now connected and authenticated.",
-          });
-        }
       } else {
-        console.log("Existing profile found, signing in with magic link");
+        console.log("Existing profile found, signing in");
         
-        // For existing users, just update the magic link to ensure authentication
-        const { error: signInError } = await supabase.auth.signInWithOtp({
-          email: walletEmail,
-          options: {
-            shouldCreateUser: false
-          }
-        });
+        // Authenticate with existing wallet address
+        const { error: authError } = await jsonStorageClient.auth.authenticateWithWallet(address);
         
-        if (signInError) {
-          console.error("Magic link error:", signInError);
-          throw signInError;
-        }
-        
-        // Update the profile to ensure wallet address is correctly set
-        const { data } = await supabase.auth.getUser();
-        
-        if (data && data.user) {
-          await supabase
-            .from('profiles')
-            .update({ wallet_address: address })
-            .eq('id', data.user.id);
+        if (authError) {
+          console.error("Authentication error:", authError);
+          throw authError;
         }
         
         toast({
@@ -256,8 +199,8 @@ export const WalletSelector = () => {
     try {
       await disconnect();
       
-      // Sign out from Supabase and clean up auth state
-      await supabase.auth.signOut({ scope: 'global' });
+      // Sign out and clean up auth state
+      await jsonStorageClient.auth.signOut();
       cleanupAuthState();
       
       toast({

@@ -1,10 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
 import { Layout } from '../components/Layout';
 import { ContentCard } from '../components/ContentCard';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { supabase } from '@/integrations/supabase/client';
+import { jsonStorageClient } from '@/integrations/jsonStorage/client';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useAuth } from '@/providers/AptosWalletProvider';
@@ -35,10 +34,9 @@ const Explore = () => {
       setLoading(true);
       setError(null);
       
-      const { data, error } = await supabase
+      const { data, error } = await jsonStorageClient
         .from('content')
-        .select('id, title, description, content_type, nft_collection_address, views')
-        .order('created_at', { ascending: false });
+        .select();
         
       if (error) throw error;
       

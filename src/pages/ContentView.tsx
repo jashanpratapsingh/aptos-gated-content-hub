@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Layout } from '../components/Layout';
@@ -6,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Lock, FileVideo, FileText, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useWallet } from '@aptos-labs/wallet-adapter-react';
-import { supabase } from '@/integrations/supabase/client';
+import { jsonStorageClient } from '@/integrations/jsonStorage/client';
 
 interface Content {
   id: string;
@@ -15,7 +14,8 @@ interface Content {
   content_type: 'pdf' | 'video';
   nft_collection_address: string;
   storage_path: string;
-  creator: {
+  creator_id: string;
+  creator?: {
     wallet_address: string;
   }
 }
@@ -41,48 +41,40 @@ const ContentView = () => {
     try {
       setLoading(true);
       
-      // Fetch content with creator info
-      const { data, error } = await supabase
+      // Fetch content
+      const { data: contentData, error } = await jsonStorageClient
         .from('content')
-        .select(`
-          id, 
-          title, 
-          description, 
-          content_type, 
-          nft_collection_address,
-          storage_path,
-          profiles:creator_id (
-            wallet_address
-          )
-        `)
+        .select()
         .eq('id', contentId)
         .single();
       
       if (error) throw error;
       
-      if (!data) {
+      if (!contentData) {
         navigate('/404');
         return;
       }
       
+      // Get creator profile
+      const { data: creatorProfile } = await jsonStorageClient
+        .from('profiles')
+        .select()
+        .eq('id', contentData.creator_id)
+        .single();
+      
       // Transform data to match our Content interface
-      const contentData: Content = {
-        id: data.id,
-        title: data.title,
-        description: data.description,
-        content_type: data.content_type,
-        nft_collection_address: data.nft_collection_address,
-        storage_path: data.storage_path,
+      const content: Content = {
+        ...contentData,
         creator: {
-          wallet_address: data.profiles.wallet_address
+          wallet_address: creatorProfile?.wallet_address || 'unknown'
         }
       };
       
-      setContent(contentData);
+      setContent(content);
       
       // If user is already connected, check NFT ownership
       if (connected && account) {
-        await checkNftOwnership(contentData.nft_collection_address);
+        await checkNftOwnership(content.nft_collection_address);
       }
     } catch (error) {
       console.error('Error loading content:', error);
@@ -127,7 +119,7 @@ const ContentView = () => {
       
       // Get content URL if user has access
       if (hasNft && content) {
-        const { data } = await supabase.storage
+        const { data } = await jsonStorageClient.storage
           .from('content')
           .createSignedUrl(content.storage_path, 3600); // 1 hour expiry
           
@@ -145,19 +137,20 @@ const ContentView = () => {
     try {
       if (!content || !account?.address) return;
       
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await jsonStorageClient.auth.getUser();
       
       // Log content access
-      await supabase.from('content_access_logs').insert([
+      await jsonStorageClient.from('content_access_logs').insert([
         {
           content_id: content.id,
           user_id: user?.id || null,
           wallet_address: account.address,
+          accessed_at: new Date().toISOString()
         }
       ]);
       
       // Increment view count
-      await supabase.rpc('increment_content_views', { content_id: content.id });
+      await jsonStorageClient.rpc('increment_content_views', { content_id: content.id });
     } catch (error) {
       console.error('Error logging content access:', error);
     }

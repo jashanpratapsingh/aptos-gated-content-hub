@@ -3,7 +3,7 @@ import React, { ReactNode, createContext, useContext, useEffect, useState } from
 import { AptosWalletAdapterProvider } from '@aptos-labs/wallet-adapter-react';
 import { PetraWallet } from 'petra-plugin-wallet-adapter';
 import { MartianWallet } from '@martianwallet/aptos-wallet-adapter';
-import { supabase } from '@/integrations/supabase/client';
+import { jsonStorageClient } from '@/integrations/jsonStorage/client';
 
 interface AptosWalletProviderProps {
   children: ReactNode;
@@ -34,13 +34,13 @@ export const AptosWalletProvider: React.FC<AptosWalletProviderProps> = ({ childr
     const checkAuthState = async () => {
       try {
         // Set up auth state listener FIRST
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+        const { data: { subscription } } = jsonStorageClient.auth.onAuthStateChange((event, session) => {
           setIsAuthenticated(!!session);
           console.log("Auth state changed:", event, !!session);
         });
         
         // THEN check for existing session
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session } } = await jsonStorageClient.auth.getSession();
         setIsAuthenticated(!!session);
         setIsLoading(false);
         
