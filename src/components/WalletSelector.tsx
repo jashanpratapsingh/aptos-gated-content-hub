@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useWallet, WalletName } from '@aptos-labs/wallet-adapter-react';
 import { supabase } from '@/integrations/supabase/client';
+import { createHash } from 'crypto-browserify';
 
 export const WalletSelector = () => {
   const [showWallets, setShowWallets] = useState(false);
@@ -51,6 +52,14 @@ export const WalletSelector = () => {
     return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
   };
 
+  // Create a consistent, secure password that's shorter than 72 characters
+  const createConsistentPassword = (address: string) => {
+    // Create SHA-256 hash of the wallet address (will always be 64 chars)
+    const hash = createHash('sha256').update(address.toLowerCase()).digest('hex');
+    // Add some fixed salt and return 64 chars (well under the 72 char limit)
+    return `${hash.substring(0, 32)}WalletAuth${hash.substring(32, 52)}`;
+  };
+
   // Clean up Supabase auth state
   const cleanupAuthState = () => {
     localStorage.removeItem('supabase.auth.token');
@@ -89,10 +98,11 @@ export const WalletSelector = () => {
         .eq('wallet_address', address)
         .limit(1);
       
-      // Generate deterministic email and password based on wallet address
-      // This makes the credentials consistent for the same wallet
+      // Generate deterministic email based on wallet address
       const emailAddress = `${address.toLowerCase()}@aptos-wallet.user`;
-      const password = `${address.toLowerCase()}#WalletAuth!2025`;
+      
+      // Generate consistent password that's under 72 characters
+      const password = createConsistentPassword(address);
       
       if (!existingProfiles || existingProfiles.length === 0) {
         // No existing profile - create a new account
