@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Lock, FileVideo, FileText, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -34,15 +33,9 @@ export const ContentCard = ({
   const { connected, account } = useWallet();
   const { verifyNftOwnership } = useAptosService();
   
-  // Check NFT ownership when wallet connection changes
-  useEffect(() => {
-    if (connected && account && isLocked) {
-      checkNftAccess();
-    } else {
-      setHasNftAccess(false);
-    }
-  }, [connected, account, nftCollection]);
-
+  // We're removing the useEffect that automatically checks NFT ownership
+  // to prevent immediate "Access Denied" errors
+  
   const checkNftAccess = async () => {
     try {
       setVerifying(true);

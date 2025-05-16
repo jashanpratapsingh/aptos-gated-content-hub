@@ -35,10 +35,30 @@ interface TokenDataId {
   name?: string;
 }
 
+interface TokenStoreResource {
+  type: string;
+  data: {
+    tokens: {
+      handle: string;
+    };
+  };
+}
+
+interface TokenItem {
+  value: {
+    collection?: string;
+    name?: string;
+    creator?: string;
+  };
+}
+
 // Initialize Aptos client (using mainnet for production or testnet for testing)
 const aptosClient = new Aptos(new AptosConfig({
   network: Network.MAINNET
 }));
+
+// Base Aptos API URL
+const APTOS_API_URL = 'https://api.mainnet.aptoslabs.com/v1';
 
 export const useAptosService = () => {
   const { toast } = useToast();
@@ -46,7 +66,7 @@ export const useAptosService = () => {
 
   /**
    * Verifies if a wallet owns an NFT from a specific collection
-   * @param collectionAddress - The address of the NFT collection
+   * @param collectionAddress - The address or name of the NFT collection
    * @returns Promise<boolean> - Whether the wallet owns an NFT from the collection
    */
   const verifyNftOwnership = async (collectionAddress: string): Promise<boolean> => {
@@ -66,8 +86,75 @@ export const useAptosService = () => {
 
       console.log("Checking NFTs for address:", formattedUserAddress);
       console.log("Looking for collection:", formattedCollectionAddress);
-
-      // Get the account's tokens with the correct type
+      
+      // Method 1: Using the approach from the example provided
+      try {
+        // Step 1: Fetch all resources owned by the wallet
+        const resourcesResponse = await fetch(
+          `${APTOS_API_URL}/accounts/${formattedUserAddress}/resources`
+        );
+        const resources = await resourcesResponse.json();
+        
+        // Step 2: Find the TokenStore resource
+        const tokenStore = resources.find(
+          (r: TokenStoreResource) => r.type === "0x3::token::TokenStore"
+        );
+        
+        if (!tokenStore || !tokenStore.data?.tokens?.handle) {
+          console.log("No TokenStore resource found");
+          return false;
+        }
+        
+        // Step 3: Fetch all NFTs using the handle
+        const handle = tokenStore.data.tokens.handle;
+        console.log("Found tokens handle:", handle);
+        
+        const tokensResponse = await fetch(
+          `${APTOS_API_URL}/tables/${handle}/items?limit=100`
+        );
+        const tokens = await tokensResponse.json();
+        
+        console.log(`Found ${tokens.length} tokens in wallet`);
+        
+        if (tokens.length > 0) {
+          console.log("Sample token:", JSON.stringify(tokens[0], null, 2));
+        }
+        
+        // Step 4: Check if any NFT's collection matches the collectionAddress
+        const collectionMatch = tokens.some((token: TokenItem) => {
+          if (!token.value) return false;
+          
+          // Different ways the collection could be identified
+          const collection = token.value.collection;
+          const creator = token.value.creator;
+          
+          // Log what we're comparing
+          console.log(`Token collection: ${collection}, creator: ${creator}`);
+          console.log(`Comparing with: ${formattedCollectionAddress}`);
+          
+          // Check for matches in different fields
+          const isMatch = 
+            (collection && collection.toLowerCase() === formattedCollectionAddress.toLowerCase()) || 
+            (creator && creator.toLowerCase() === formattedCollectionAddress.toLowerCase());
+          
+          if (isMatch) {
+            console.log("✅ Match found!");
+          }
+          
+          return isMatch;
+        });
+        
+        if (collectionMatch) {
+          console.log("Collection match found via TokenStore method");
+          return true;
+        }
+      } catch (error) {
+        console.error("Error with TokenStore method:", error);
+        // Fall back to the original method if this fails
+      }
+      
+      // Method 2: Fallback to the original method using getAccountOwnedTokens
+      console.log("Trying fallback method with getAccountOwnedTokens...");
       const response = await aptosClient.getAccountOwnedTokens({
         accountAddress: formattedUserAddress,
       }) as unknown as TokenOwnershipResponse[];
