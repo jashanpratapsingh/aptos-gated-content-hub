@@ -8,6 +8,7 @@ import { useWallet } from '@aptos-labs/wallet-adapter-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAptosService } from '@/services/aptosService';
 import { useContentService } from '@/services/contentService';
+import PdfViewer from '@/components/PdfViewer';
 
 interface Content {
   id: string;
@@ -188,10 +189,9 @@ const ContentView = () => {
           <div className="aptos-card p-6 animate-fade-in">
             {contentUrl ? (
               <div className="mb-4">
-                <iframe 
-                  src={contentUrl} 
-                  className="w-full h-[500px] rounded-lg border border-border"
-                  title={content.title}
+                <PdfViewer 
+                  pdfUrl={contentUrl} 
+                  onDownload={() => contentUrl && window.open(contentUrl, '_blank')} 
                 />
               </div>
             ) : (
@@ -200,13 +200,6 @@ const ContentView = () => {
                 <p className="text-aptosGray">PDF Viewer would be embedded here</p>
               </div>
             )}
-            <Button 
-              className="aptos-btn w-full" 
-              onClick={() => contentUrl && window.open(contentUrl, '_blank')}
-              disabled={!contentUrl}
-            >
-              Download PDF
-            </Button>
           </div>
         );
       case 'video':

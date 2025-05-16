@@ -49,7 +49,7 @@ export const ContentCard = ({
       // Clear previous state
       setHasNftAccess(false);
 
-      // Verify if the user owns an NFT from the collection
+      // Enhanced console logging for debugging
       console.log("Verifying NFT ownership for collection:", nftCollection);
       console.log("Account address:", account.address);
       
