@@ -31,8 +31,10 @@ export const useAptosService = () => {
         ? account.address 
         : `0x${account.address}`;
 
-      // Check if the account has token data
-      const response = await aptosClient.getAccountOwnedTokens(formattedUserAddress);
+      // Check if the account has token data - use proper parameter object format
+      const response = await aptosClient.getAccountOwnedTokens({
+        accountAddress: formattedUserAddress,
+      });
       
       // If the user has no tokens
       if (!response || response.length === 0) {
@@ -42,7 +44,10 @@ export const useAptosService = () => {
       // Check if any token belongs to the specified collection
       return response.some(token => {
         // Extract the collection address from the token data
-        const tokenCollectionId = token.current_token_data?.token_data_id?.collection;
+        // Make sure we're accessing the correct property path based on the token data structure
+        const tokenData = token.current_token_data?.token_data_id;
+        const tokenCollectionId = tokenData ? tokenData.collection : '';
+        
         // Compare with the specified collection address
         return tokenCollectionId && 
                tokenCollectionId.toLowerCase() === formattedCollectionAddress.toLowerCase();
