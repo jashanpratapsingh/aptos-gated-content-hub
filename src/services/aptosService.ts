@@ -51,8 +51,10 @@ export const useAptosService = () => {
         let tokenCollectionId = '';
         
         // Add additional null check for tokenDataId
-        if (tokenDataId != null && typeof tokenDataId === 'object' && 'collection' in tokenDataId) {
-          tokenCollectionId = tokenDataId.collection as string;
+        if (tokenDataId !== null && tokenDataId !== undefined) {
+          if (typeof tokenDataId === 'object' && tokenDataId !== null && 'collection' in tokenDataId) {
+            tokenCollectionId = tokenDataId.collection as string;
+          }
         }
         
         // Compare with the specified collection address
