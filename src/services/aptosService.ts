@@ -22,11 +22,17 @@ interface TokenOwnershipResponse {
     metadata_uri?: string;
     name?: string;
     token_data_id?: {
-      collection: string;
-      creator: string;
-      name: string;
+      collection?: string;
+      creator?: string;
+      name?: string;
     };
   };
+}
+
+interface TokenDataId {
+  collection?: string;
+  creator?: string;
+  name?: string;
 }
 
 // Initialize Aptos client (using mainnet for production or testnet for testing)
@@ -75,7 +81,9 @@ export const useAptosService = () => {
       }
 
       // Log the entire first token for debugging
-      console.log("Full token data:", JSON.stringify(response[0], null, 2));
+      if (response.length > 0) {
+        console.log("Full token data:", JSON.stringify(response[0], null, 2));
+      }
       
       // Check if any token belongs to the specified collection
       const result = response.some(token => {
@@ -89,7 +97,9 @@ export const useAptosService = () => {
         
         // Extract information from current_token_data if available
         const currentTokenData = token.current_token_data || {};
-        const tokenDataIdObj = currentTokenData.token_data_id || {};
+        const tokenDataIdObj = (currentTokenData.token_data_id || {}) as TokenDataId;
+        
+        // Safely access potentially undefined properties
         const currentCreator = tokenDataIdObj.creator || '';
         const currentCollection = tokenDataIdObj.collection || '';
         
