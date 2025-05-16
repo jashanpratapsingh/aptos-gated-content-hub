@@ -1,9 +1,10 @@
 
-import { jsonStorageClient, ContentItem } from '@/integrations/jsonStorage/client';
+import { jsonStorageClient } from '@/integrations/jsonStorage/client';
 import { useToast } from '@/hooks/use-toast';
 import { useWallet } from '@aptos-labs/wallet-adapter-react';
+import type { ContentItem } from '@/integrations/jsonStorage/client';
 
-export { ContentItem };
+export type { ContentItem };
 
 export const useContentService = () => {
   const { toast } = useToast();
@@ -29,14 +30,18 @@ export const useContentService = () => {
         throw new Error('Profile not found');
       }
       
+      // Get content items without using order method
       const { data, error } = await jsonStorageClient
         .from('content')
         .select()
-        .eq('creator_id', profile.id)
-        .order('created_at', { ascending: false });
+        .eq('creator_id', profile.id);
         
       if (error) throw error;
-      return data as ContentItem[];
+      
+      // Sort the content manually after fetching
+      return (data as ContentItem[]).sort((a, b) => 
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
     } catch (error: any) {
       toast({
         title: 'Error fetching content',
