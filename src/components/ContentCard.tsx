@@ -1,9 +1,11 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Lock, FileVideo, FileText } from 'lucide-react';
+import { Lock, FileVideo, FileText, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
+import { useWallet } from '@aptos-labs/wallet-adapter-react';
+import { useAptosService } from '@/services/aptosService';
 
 interface ContentCardProps {
   title: string;
@@ -25,8 +27,50 @@ export const ContentCard = ({
   contentUrl
 }: ContentCardProps) => {
   const [loading, setLoading] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [hasNftAccess, setHasNftAccess] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { connected, account } = useWallet();
+  const { verifyNftOwnership } = useAptosService();
+  
+  // Check NFT ownership when wallet connection changes
+  useEffect(() => {
+    if (connected && account && isLocked) {
+      checkNftAccess();
+    } else {
+      setHasNftAccess(false);
+    }
+  }, [connected, account, nftCollection]);
+
+  const checkNftAccess = async () => {
+    try {
+      setVerifying(true);
+      if (!connected || !account) {
+        toast({
+          title: "Wallet Not Connected",
+          description: "Please connect your wallet to verify NFT ownership",
+        });
+        setHasNftAccess(false);
+        return;
+      }
+
+      // Verify if the user owns an NFT from the collection
+      const hasAccess = await verifyNftOwnership(nftCollection);
+      setHasNftAccess(hasAccess);
+      
+      if (hasAccess) {
+        toast({
+          title: "Access Granted!",
+          description: "You own an NFT from this collection. Content unlocked.",
+        });
+      }
+    } catch (error) {
+      console.error('Error checking NFT access:', error);
+    } finally {
+      setVerifying(false);
+    }
+  };
   
   const handleViewContent = () => {
     if (!contentUrl) {
@@ -38,6 +82,23 @@ export const ContentCard = ({
       return;
     }
     
+    if (isLocked && !hasNftAccess) {
+      if (!connected) {
+        toast({
+          title: "Wallet Not Connected",
+          description: "Please connect your wallet to verify NFT ownership",
+        });
+      } else {
+        toast({
+          title: "Access Denied",
+          description: "You don't own the required NFT to access this content",
+          variant: "destructive",
+        });
+      }
+      return;
+    }
+    
+    // If user has access or content is not locked
     navigate(contentUrl);
   };
   
@@ -60,7 +121,7 @@ export const ContentCard = ({
           alt={title} 
           className="w-full h-full object-cover"
         />
-        {isLocked && (
+        {isLocked && !hasNftAccess && (
           <div className="absolute inset-0 frosted-glass flex items-center justify-center">
             <Lock className="w-12 h-12 text-white/70" />
           </div>
@@ -85,14 +146,20 @@ export const ContentCard = ({
         </div>
         
         <div className="mt-4">
-          <Button
-            onClick={handleViewContent}
-            disabled={loading}
-            className={isLocked ? "w-full" : "aptos-btn w-full"}
-            variant={isLocked ? "outline" : "default"}
-          >
-            {loading ? "Loading..." : "View Content"}
-          </Button>
+          {verifying ? (
+            <Button disabled className="w-full">
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Verifying Ownership...
+            </Button>
+          ) : (
+            <Button
+              onClick={isLocked && !hasNftAccess ? checkNftAccess : handleViewContent}
+              className={hasNftAccess || !isLocked ? "aptos-btn w-full" : "w-full"}
+              variant={hasNftAccess || !isLocked ? "default" : "outline"}
+            >
+              {hasNftAccess || !isLocked ? "View Content" : "Verify NFT Ownership"}
+            </Button>
+          )}
         </div>
       </div>
     </div>

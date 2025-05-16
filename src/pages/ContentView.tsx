@@ -5,7 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Lock, FileVideo, FileText, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useWallet } from '@aptos-labs/wallet-adapter-react';
-import { jsonStorageClient } from '@/integrations/jsonStorage/client';
+import { supabase } from '@/integrations/supabase/client';
+import { useAptosService } from '@/services/aptosService';
+import { useContentService } from '@/services/contentService';
 
 interface Content {
   id: string;
@@ -30,6 +32,8 @@ const ContentView = () => {
   const [verifying, setVerifying] = useState(false);
   const { toast } = useToast();
   const { account, connected } = useWallet();
+  const { verifyNftOwnership } = useAptosService();
+  const { logContentAccess } = useContentService();
   
   useEffect(() => {
     if (id) {
@@ -42,7 +46,7 @@ const ContentView = () => {
       setLoading(true);
       
       // Fetch content
-      const { data: contentData, error } = await jsonStorageClient
+      const { data: contentData, error } = await supabase
         .from('content')
         .select()
         .eq('id', contentId)
@@ -56,7 +60,7 @@ const ContentView = () => {
       }
       
       // Get creator profile
-      const { data: creatorProfile } = await jsonStorageClient
+      const { data: creatorProfile } = await supabase
         .from('profiles')
         .select()
         .eq('id', contentData.creator_id)
@@ -89,7 +93,7 @@ const ContentView = () => {
     }
   };
   
-  // Simplified NFT verification (in a real app, you would check the blockchain)
+  // Real blockchain verification of NFT ownership using Aptos
   const checkNftOwnership = async (nftCollectionAddress: string) => {
     try {
       setVerifying(true);
@@ -99,27 +103,19 @@ const ContentView = () => {
         return;
       }
       
-      // For demo purposes, we're going to simulate a blockchain check
-      // In a real app, you would check if the user owns an NFT from this collection
-      // on the Aptos blockchain
-      
-      // Simulate API call to verify NFT ownership
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // For demo purposes, we'll assume ownership with 50% probability
-      // In a real app, this would be a real verification
-      const hasNft = Math.random() > 0.5;
+      // Verify NFT ownership using our Aptos service
+      const hasNft = await verifyNftOwnership(nftCollectionAddress);
       
       setIsNftOwner(hasNft);
       
       // Log content access if verification is successful
       if (hasNft && content) {
-        await logContentAccess();
+        await logContentAccess(content.id);
       }
       
       // Get content URL if user has access
       if (hasNft && content) {
-        const { data } = await jsonStorageClient.storage
+        const { data } = await supabase.storage
           .from('content')
           .createSignedUrl(content.storage_path, 3600); // 1 hour expiry
           
@@ -130,29 +126,6 @@ const ContentView = () => {
       setIsNftOwner(false);
     } finally {
       setVerifying(false);
-    }
-  };
-  
-  const logContentAccess = async () => {
-    try {
-      if (!content || !account?.address) return;
-      
-      const { data: { user } } = await jsonStorageClient.auth.getUser();
-      
-      // Log content access
-      await jsonStorageClient.from('content_access_logs').insert([
-        {
-          content_id: content.id,
-          user_id: user?.id || null,
-          wallet_address: account.address,
-          accessed_at: new Date().toISOString()
-        }
-      ]);
-      
-      // Increment view count
-      await jsonStorageClient.rpc('increment_content_views', { content_id: content.id });
-    } catch (error) {
-      console.error('Error logging content access:', error);
     }
   };
   
