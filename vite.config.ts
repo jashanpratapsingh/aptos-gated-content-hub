@@ -20,8 +20,16 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  // Add polyfills for node built-ins that crypto-browserify requires
+  // Add polyfills for node built-ins
   define: {
     global: 'window',
+  },
+  optimizeDeps: {
+    esbuildOptions: {
+      // Node.js global to browser globalThis
+      define: {
+        global: 'globalThis',
+      },
+    },
   },
 }));

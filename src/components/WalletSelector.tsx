@@ -4,7 +4,40 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useWallet, WalletName } from '@aptos-labs/wallet-adapter-react';
 import { supabase } from '@/integrations/supabase/client';
-import { createHash } from 'crypto-browserify';
+
+/**
+ * Creates a SHA-256 hash of the input string using WebCrypto API if available
+ * with a fallback to a simple string hashing algorithm
+ */
+async function createSHA256Hash(input: string): Promise<string> {
+  try {
+    // Use browser's native WebCrypto API if available
+    if (window.crypto && window.crypto.subtle) {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(input.toLowerCase());
+      const hashBuffer = await window.crypto.subtle.digest('SHA-256', data);
+      
+      // Convert buffer to hex string
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    } else {
+      throw new Error('WebCrypto not available');
+    }
+  } catch (error) {
+    console.error("Error creating crypto hash:", error);
+    
+    // Fallback hashing method
+    let hash = 0;
+    for (let i = 0; i < input.length; i++) {
+      const char = input.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32bit integer
+    }
+    
+    // Create a hex string
+    return Math.abs(hash).toString(16).padStart(8, '0');
+  }
+}
 
 export const WalletSelector = () => {
   const [showWallets, setShowWallets] = useState(false);
@@ -53,24 +86,18 @@ export const WalletSelector = () => {
   };
 
   // Create a consistent, secure password that's shorter than 72 characters
-  const createConsistentPassword = (address: string) => {
+  const createConsistentPassword = async (address: string): Promise<string> => {
     try {
-      // Create SHA-256 hash of the wallet address (will always be 64 chars)
-      const hash = createHash('sha256').update(address.toLowerCase()).digest('hex');
-      // Add some fixed salt and return 64 chars (well under the 72 char limit)
-      return `${hash.substring(0, 32)}WalletAuth${hash.substring(32, 52)}`;
+      // Generate hash using the browser-safe function
+      const hash = await createSHA256Hash(address);
+      
+      // Ensure the password is under 72 chars by using only part of the hash
+      // plus some identifying information
+      return `${hash.substring(0, 20)}WalletAuth${address.substring(0, 8)}`;
     } catch (error) {
-      console.error("Error creating password hash:", error);
-      // Fallback method if crypto fails in the browser
-      let hash = 0;
-      for (let i = 0; i < address.length; i++) {
-        const char = address.charCodeAt(i);
-        hash = ((hash << 5) - hash) + char;
-        hash = hash & hash; // Convert to 32bit integer
-      }
-      // Create a hex string and ensure it's positive
-      const hexHash = Math.abs(hash).toString(16).padStart(8, '0');
-      return `Wallet${hexHash}Auth${address.substring(0, 8)}`;
+      console.error("Error creating password:", error);
+      // Super simple fallback that will still be unique per address
+      return `Wallet${address.substring(0, 16)}Auth`;
     }
   };
 
@@ -116,7 +143,7 @@ export const WalletSelector = () => {
       const emailAddress = `${address.toLowerCase()}@aptos-wallet.user`;
       
       // Generate consistent password that's under 72 characters
-      const password = createConsistentPassword(address);
+      const password = await createConsistentPassword(address);
       
       if (!existingProfiles || existingProfiles.length === 0) {
         // No existing profile - create a new account
