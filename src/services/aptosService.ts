@@ -74,64 +74,68 @@ export const useAptosService = () => {
         return false;
       }
 
-      // Debug: Log the first few tokens to see their structure
-      console.log("Token sample:", JSON.stringify(response.slice(0, 2), null, 2));
+      // Log the entire first token for debugging
+      console.log("Full token data:", JSON.stringify(response[0], null, 2));
       
       // Check if any token belongs to the specified collection
       const result = response.some(token => {
-        // Extract the collection address from the token data structure
-        let tokenCollectionId = '';
-        let tokenCreator = '';
+        // Raw token data ID is often in the format: "creator_address::collection_name::token_name"
+        const tokenDataId = typeof token.token_data_id === 'string' ? token.token_data_id : '';
         
-        // Try to get collection from different possible locations in the response
-        if (token.current_token_data?.token_data_id?.collection) {
-          // If token_data_id is an object with collection
-          tokenCollectionId = token.current_token_data.token_data_id.collection;
-          tokenCreator = token.current_token_data.token_data_id.creator;
-        } else if (token.collection) {
-          // Some responses might have collection directly
-          tokenCollectionId = token.collection;
-          tokenCreator = token.creator || '';
-        } else if (typeof token.token_data_id === 'string' && token.token_data_id.includes('::')) {
-          // Sometimes token_data_id is a string like "creator_address::collection_name::token_name"
-          const parts = token.token_data_id.split('::');
-          if (parts.length > 1) {
-            // The first part is typically the creator address
-            tokenCreator = parts[0];
-            // The second part is typically the collection name
-            if (parts.length > 1) {
-              tokenCollectionId = parts[1];
-            }
-          }
+        // First try to parse the token_data_id if it's a string with a specific format
+        const tokenParts = tokenDataId.split('::');
+        const creatorAddress = tokenParts.length > 0 ? tokenParts[0] : '';
+        const collectionName = tokenParts.length > 1 ? tokenParts[1] : '';
+        
+        // Extract information from current_token_data if available
+        const currentTokenData = token.current_token_data || {};
+        const tokenDataIdObj = currentTokenData.token_data_id || {};
+        const currentCreator = tokenDataIdObj.creator || '';
+        const currentCollection = tokenDataIdObj.collection || '';
+        
+        // Also look for direct collection/creator properties
+        const directCollection = token.collection || '';
+        const directCreator = token.creator || '';
+        
+        // Try all possible collection/creator combinations
+        const possibleCreatorAddresses = [
+          creatorAddress,
+          currentCreator,
+          directCreator
+        ].filter(Boolean);
+        
+        const possibleCollectionIds = [
+          collectionName,
+          currentCollection,
+          directCollection
+        ].filter(Boolean);
+        
+        console.log("Possible creators:", possibleCreatorAddresses);
+        console.log("Possible collections:", possibleCollectionIds);
+        
+        // Also check if the token_data_id itself contains the collection address
+        const tokenDataIdContainsCollection = tokenDataId.toLowerCase().includes(formattedCollectionAddress.toLowerCase());
+        
+        // On Aptos, sometimes the collection ID can be the creator's address
+        const creatorMatches = possibleCreatorAddresses.some(
+          creator => creator.toLowerCase() === formattedCollectionAddress.toLowerCase()
+        );
+        
+        // Check if any collection name matches
+        const collectionMatches = possibleCollectionIds.some(
+          collection => collection.toLowerCase() === formattedCollectionAddress.toLowerCase()
+        );
+        
+        const isMatch = creatorMatches || collectionMatches || tokenDataIdContainsCollection;
+        
+        if (isMatch) {
+          console.log("✅ Match found!");
+          if (creatorMatches) console.log("Creator address matched");
+          if (collectionMatches) console.log("Collection name matched");
+          if (tokenDataIdContainsCollection) console.log("Token data ID contains collection address");
         }
         
-        // Log the collection ID we found for debugging
-        console.log("Found token creator:", tokenCreator);
-        console.log("Found token collection:", tokenCollectionId);
-        
-        // Try different comparison strategies:
-        
-        // 1. Direct comparison with collection address
-        const directMatch = tokenCollectionId && 
-                           tokenCollectionId.toLowerCase() === formattedCollectionAddress.toLowerCase();
-        
-        // 2. Compare with creator address (sometimes the collection is identified by creator address)
-        const creatorMatch = tokenCreator && 
-                            tokenCreator.toLowerCase() === formattedCollectionAddress.toLowerCase();
-        
-        // 3. Check if the token's token_data_id string contains the collection address
-        const containsMatch = typeof token.token_data_id === 'string' && 
-                             token.token_data_id.toLowerCase().includes(formattedCollectionAddress.toLowerCase());
-        
-        // Log all comparison results for debugging
-        if (directMatch || creatorMatch || containsMatch) {
-          console.log("✅ Match found! Strategy:", 
-                     directMatch ? "Direct match" : 
-                     creatorMatch ? "Creator match" : 
-                     "Contains match");
-        }
-        
-        return directMatch || creatorMatch || containsMatch;
+        return isMatch;
       });
       
       console.log("Final verification result:", result);
