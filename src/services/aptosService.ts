@@ -49,7 +49,9 @@ export const useAptosService = () => {
         
         // Safely access the collection property if it exists in the structure
         let tokenCollectionId = '';
-        if (tokenDataId && typeof tokenDataId === 'object' && 'collection' in tokenDataId) {
+        
+        // Add additional null check for tokenDataId
+        if (tokenDataId != null && typeof tokenDataId === 'object' && 'collection' in tokenDataId) {
           tokenCollectionId = tokenDataId.collection as string;
         }
         
