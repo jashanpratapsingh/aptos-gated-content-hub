@@ -32,7 +32,7 @@ export const useAptosService = () => {
         : `0x${account.address}`;
 
       // Query the blockchain to get NFTs owned by the wallet
-      const tokensCount = await aptosClient.getAccountOwnedTokensCount({
+      const tokensCount = await aptosClient.getAccountTokensCount({
         accountAddress: formattedUserAddress,
       });
 
@@ -42,7 +42,7 @@ export const useAptosService = () => {
       }
 
       // Get token data for the user
-      const tokenData = await aptosClient.getAccountOwnedTokens({
+      const tokenData = await aptosClient.getAccountTokens({
         accountAddress: formattedUserAddress,
         options: {
           limit: 100 // Adjust as needed
