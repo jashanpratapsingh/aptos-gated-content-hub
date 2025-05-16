@@ -31,28 +31,21 @@ export const useAptosService = () => {
         ? account.address 
         : `0x${account.address}`;
 
-      // Query the blockchain to get NFTs owned by the wallet
-      const tokensCount = await aptosClient.getAccountTokensCount({
-        accountAddress: formattedUserAddress,
-      });
-
+      // Check if the account has token data
+      const response = await aptosClient.getAccountOwnedTokens(formattedUserAddress);
+      
       // If the user has no tokens
-      if (!tokensCount || Number(tokensCount) === 0) {
+      if (!response || response.length === 0) {
         return false;
       }
 
-      // Get token data for the user
-      const tokenData = await aptosClient.getAccountTokens({
-        accountAddress: formattedUserAddress,
-        options: {
-          limit: 100 // Adjust as needed
-        }
-      });
-
       // Check if any token belongs to the specified collection
-      return tokenData.some(token => {
-        const tokenCollectionAddress = token.current_token_data?.collection_id || '';
-        return tokenCollectionAddress.toLowerCase() === formattedCollectionAddress.toLowerCase();
+      return response.some(token => {
+        // Extract the collection address from the token data
+        const tokenCollectionId = token.current_token_data?.token_data_id?.collection;
+        // Compare with the specified collection address
+        return tokenCollectionId && 
+               tokenCollectionId.toLowerCase() === formattedCollectionAddress.toLowerCase();
       });
     } catch (error) {
       console.error('Error verifying NFT ownership:', error);
