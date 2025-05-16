@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Layout } from '../components/Layout';
@@ -120,11 +121,26 @@ const ContentView = () => {
           .from('content')
           .createSignedUrl(content.storage_path, 3600); // 1 hour expiry
           
-        setContentUrl(data?.signedUrl || null);
+        if (data?.signedUrl) {
+          console.log("Content URL generated:", data.signedUrl);
+          setContentUrl(data.signedUrl);
+        } else {
+          console.error("Failed to generate signed URL");
+          toast({
+            title: "Content Unavailable",
+            description: "Unable to load the content at this time.",
+            variant: "destructive",
+          });
+        }
       }
     } catch (error) {
       console.error('Error verifying NFT ownership:', error);
       setIsNftOwner(false);
+      toast({
+        title: "Verification Error",
+        description: "There was a problem verifying your NFT ownership.",
+        variant: "destructive",
+      });
     } finally {
       setVerifying(false);
     }
@@ -150,6 +166,12 @@ const ContentView = () => {
         description: "You don't own an NFT from the required collection.",
         variant: "destructive",
       });
+    }
+  };
+  
+  const handleDownloadPdf = () => {
+    if (contentUrl) {
+      window.open(contentUrl, '_blank');
     }
   };
   
@@ -183,44 +205,60 @@ const ContentView = () => {
       );
     }
     
+    // Content is unlocked, show based on type
+    if (!contentUrl) {
+      return (
+        <div className="aptos-card p-6">
+          <div className="bg-black/40 rounded-lg p-4 h-64 flex items-center justify-center flex-col">
+            <Loader2 className="h-12 w-12 animate-spin text-aptosGray mb-4" />
+            <p className="text-aptosGray">Loading content...</p>
+          </div>
+        </div>
+      );
+    }
+    
     switch (content.content_type) {
       case 'pdf':
         return (
           <div className="aptos-card p-6 animate-fade-in">
-            {contentUrl ? (
-              <PdfViewer 
-                pdfUrl={contentUrl} 
-                onDownload={() => window.open(contentUrl, '_blank')} 
-              />
-            ) : (
-              <div className="bg-black/40 rounded-lg p-4 h-[500px] flex items-center justify-center">
-                <FileText className="h-16 w-16 text-aptosGray mb-2" />
-                <p className="text-aptosGray">PDF loading failed. Please try again.</p>
-              </div>
-            )}
+            <PdfViewer 
+              pdfUrl={contentUrl} 
+              onDownload={handleDownloadPdf} 
+            />
           </div>
         );
       case 'video':
         return (
           <div className="aptos-card overflow-hidden animate-fade-in">
-            {contentUrl ? (
-              <div className="aspect-video">
-                <video 
-                  src={contentUrl} 
-                  controls 
-                  className="w-full h-full" 
-                />
-              </div>
-            ) : (
-              <div className="aspect-video bg-black/40 flex items-center justify-center flex-col">
-                <FileVideo className="h-16 w-16 text-aptosGray mb-2" />
-                <p className="text-aptosGray">Video Player would be embedded here</p>
-              </div>
-            )}
+            <div className="aspect-video">
+              <video 
+                src={contentUrl} 
+                controls 
+                className="w-full h-full" 
+                preload="auto"
+                controlsList="nodownload" 
+                poster="/placeholder.svg"
+                onError={(e) => {
+                  console.error("Video error:", e);
+                  toast({
+                    title: "Video Error",
+                    description: "There was a problem loading the video.",
+                    variant: "destructive",
+                  });
+                }}
+              />
+            </div>
           </div>
         );
       default:
-        return null;
+        return (
+          <div className="aptos-card p-6">
+            <div className="bg-black/40 rounded-lg p-4 h-64 flex items-center justify-center flex-col">
+              <FileText className="h-12 w-12 text-aptosGray mb-4" />
+              <p className="text-aptosGray">Unsupported content format</p>
+            </div>
+          </div>
+        );
     }
   };
   

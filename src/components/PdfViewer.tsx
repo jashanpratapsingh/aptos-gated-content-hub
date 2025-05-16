@@ -65,6 +65,7 @@ const PdfViewer = ({ pdfUrl, onDownload }: PdfViewerProps) => {
             onLoadError={onDocumentLoadError}
             loading={<Loader2 className="h-8 w-8 animate-spin text-aptosCyan" />}
             error={<p>Error loading PDF. Please try again.</p>}
+            className="pdf-document"
           >
             <Page 
               pageNumber={pageNumber} 
