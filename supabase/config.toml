@@ -3,3 +3,4 @@ project_id = "xaywtxmcyigetfsfiyaq"
 
 [functions.mint-nft]
 verify_jwt = false
+
