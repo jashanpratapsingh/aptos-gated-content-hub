@@ -30,23 +30,27 @@ export const useContentService = () => {
         throw new Error('Profile not found');
       }
       
-      // Use the proper then() method to get data from the JSON storage client
-      return new Promise((resolve, reject) => {
-        jsonStorageClient
+      // The issue is here - the object returned from .eq() doesn't have a .then() method directly
+      // Let's use the async/await pattern consistently
+      const result = await new Promise<{ data: ContentItem[]; error: Error | null }>((resolve) => {
+        const queryResult = jsonStorageClient
           .from('content')
           .select()
-          .eq('creator_id', profile.id)
-          .then((result) => {
-            if (result.error) {
-              reject(result.error);
-            } else {
-              // Sort the content manually after fetching
-              const sortedData = (result.data as ContentItem[])
-                .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-              resolve(sortedData);
-            }
-          });
+          .eq('creator_id', profile.id);
+          
+        // Use the limit() method which has a then() method
+        queryResult.limit(1000).then((result) => {
+          resolve(result);
+        });
       });
+      
+      if (result.error) throw result.error;
+      
+      // Sort the content manually after fetching
+      const sortedData = (result.data as ContentItem[])
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        
+      return sortedData;
     } catch (error: any) {
       toast({
         title: 'Error fetching content',
