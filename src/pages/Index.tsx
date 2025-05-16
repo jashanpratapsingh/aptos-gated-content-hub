@@ -64,6 +64,9 @@ const Index = () => {
               <Button variant="outline" className="border-aptosCyan text-white hover:bg-aptosCyan/20 text-lg py-6 px-8" asChild>
                 <Link to="/dashboard">Create Content</Link>
               </Button>
+              <Button variant="outline" className="border-aptosPurple text-white hover:bg-aptosPurple/20 text-lg py-6 px-8" asChild>
+                <Link to="/mint">Mint Sample NFTs</Link>
+              </Button>
             </div>
           </div>
           

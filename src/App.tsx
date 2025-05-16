@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import Explore from "./pages/Explore";
 import Dashboard from "./pages/Dashboard";
 import ContentView from "./pages/ContentView";
+import MintNFT from "./pages/MintNFT";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -25,6 +26,7 @@ const App = () => (
             <Route path="/explore" element={<Explore />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/content/:id" element={<ContentView />} />
+            <Route path="/mint" element={<MintNFT />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
