@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Lock, FileVideo, FileText, Loader2 } from 'lucide-react';
@@ -44,7 +45,7 @@ export const ContentCard = ({
           title: "Wallet Not Connected",
           description: "Please connect your wallet to verify NFT ownership",
         });
-        setHasNftAccess(false);
+        setVerifying(false);
         return;
       }
 
@@ -96,11 +97,14 @@ export const ContentCard = ({
           description: "Please connect your wallet to verify NFT ownership",
         });
       } else {
-        toast({
-          title: "Access Denied",
-          description: "You don't own the required NFT to access this content",
-          variant: "destructive",
+        // Instead of showing an error, let's verify ownership first
+        checkNftAccess().then(() => {
+          // After verification, check if access was granted
+          if (hasNftAccess) {
+            navigate(contentUrl);
+          }
         });
+        return;
       }
       return;
     }

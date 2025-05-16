@@ -13,7 +13,7 @@ interface TokenOwnershipResponse {
   property_version_v1: any;
   owner_address: string;
   last_transaction_version: any;
-  collection?: string; // Some responses might have this directly
+  collection?: string;
   creator?: string;
   name?: string;
   current_token_data?: {
@@ -21,10 +21,16 @@ interface TokenOwnershipResponse {
     description?: string;
     metadata_uri?: string;
     name?: string;
+    collection_id?: string; // Added this field which exists in the response
     token_data_id?: {
       collection?: string;
       creator?: string;
       name?: string;
+    };
+    current_collection?: { // Added this field which exists in the response
+      collection_id?: string;
+      collection_name?: string;
+      creator_address?: string;
     };
   };
 }
@@ -153,7 +159,7 @@ export const useAptosService = () => {
         // Fall back to the original method if this fails
       }
       
-      // Method 2: Fallback to the original method using getAccountOwnedTokens
+      // Method 2: Fallback to getting owned tokens, with updated matching logic
       console.log("Trying fallback method with getAccountOwnedTokens...");
       const response = await aptosClient.getAccountOwnedTokens({
         accountAddress: formattedUserAddress,
@@ -186,6 +192,12 @@ export const useAptosService = () => {
         const currentTokenData = token.current_token_data || {};
         const tokenDataIdObj = (currentTokenData.token_data_id || {}) as TokenDataId;
         
+        // NEW: Check collection_id directly from current_token_data
+        const collectionId = currentTokenData.collection_id || '';
+        
+        // NEW: Check collection_id from nested current_collection
+        const currentCollectionId = currentTokenData.current_collection?.collection_id || '';
+        
         // Safely access potentially undefined properties
         const currentCreator = tokenDataIdObj.creator || '';
         const currentCollection = tokenDataIdObj.collection || '';
@@ -194,7 +206,23 @@ export const useAptosService = () => {
         const directCollection = token.collection || '';
         const directCreator = token.creator || '';
         
-        // Try all possible collection/creator combinations
+        // Log collection IDs found for debugging
+        console.log("Checking collection IDs:");
+        console.log(`Direct collection_id: ${collectionId}`);
+        console.log(`Nested collection_id: ${currentCollectionId}`);
+        console.log(`Expected collection: ${formattedCollectionAddress}`);
+        
+        // NEW: Check if any collection_id matches the collection address
+        const collectionIdMatch = 
+          (collectionId && collectionId.toLowerCase() === formattedCollectionAddress.toLowerCase()) ||
+          (currentCollectionId && currentCollectionId.toLowerCase() === formattedCollectionAddress.toLowerCase());
+        
+        if (collectionIdMatch) {
+          console.log("✅ Collection ID match found!");
+          return true;
+        }
+        
+        // Try all possible collection/creator combinations as a fallback
         const possibleCreatorAddresses = [
           creatorAddress,
           currentCreator,
@@ -226,13 +254,13 @@ export const useAptosService = () => {
         const isMatch = creatorMatches || collectionMatches || tokenDataIdContainsCollection;
         
         if (isMatch) {
-          console.log("✅ Match found!");
+          console.log("✅ Match found in fallback checks!");
           if (creatorMatches) console.log("Creator address matched");
           if (collectionMatches) console.log("Collection name matched");
           if (tokenDataIdContainsCollection) console.log("Token data ID contains collection address");
         }
         
-        return isMatch;
+        return collectionIdMatch || isMatch;
       });
       
       console.log("Final verification result:", result);
@@ -252,3 +280,4 @@ export const useAptosService = () => {
     verifyNftOwnership
   };
 };
+
